@@ -1,89 +1,88 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>政府標案查詢工具</title>
   <style>
     * { box-sizing: border-box; }
 
     body {
-      font-family: Arial, "Microsoft JhengHei", sans-serif;
       margin: 0;
-      background: #f6f7fb;
-      color: #222;
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
       line-height: 1.6;
     }
 
     .container {
-      max-width: 1320px;
+      max-width: 1380px;
       margin: 0 auto;
       padding: 16px;
     }
 
     .card {
       background: #fff;
-      border: 1px solid #e3e6eb;
-      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
       padding: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
 
     h1 {
       margin: 0 0 8px 0;
-      font-size: 32px;
+      font-size: 30px;
       line-height: 1.2;
     }
 
     .subtext {
-      color: #666;
-      margin-bottom: 12px;
       font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 14px;
     }
 
-    label {
-      display: block;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 140px;
-      font-size: 16px;
-      padding: 12px;
-      border: 1px solid #cfd6df;
-      border-radius: 10px;
-      resize: vertical;
-      outline: none;
-      background: #fff;
-    }
-
-    textarea:focus,
-    input:focus,
-    select:focus {
-      border-color: #4c8bf5;
-      box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
-    }
-
-    .form-grid {
+    .grid {
       display: grid;
       grid-template-columns: 1fr 180px 220px;
       gap: 12px;
       align-items: end;
     }
 
-    .field input,
-    .field select {
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    textarea,
+    input,
+    select {
       width: 100%;
-      height: 46px;
-      font-size: 16px;
-      padding: 10px 12px;
       border: 1px solid #cfd6df;
       border-radius: 10px;
       background: #fff;
+      padding: 12px;
+      font-size: 16px;
       outline: none;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    input,
+    select {
+      height: 46px;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: #4c8bf5;
+      box-shadow: 0 0 0 3px rgba(76,139,245,0.14);
     }
 
     .btn-row {
@@ -100,8 +99,8 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      background: #1f6feb;
       color: #fff;
+      background: #1f6feb;
     }
 
     button.secondary {
@@ -109,68 +108,66 @@
       color: #1f4fbf;
     }
 
-    button.export-btn {
+    button.export {
       background: #0f9d58;
-      color: #fff;
     }
 
     .status {
-      font-size: 14px;
-      color: #333;
-      background: #f7f8fa;
-      border: 1px solid #e3e6eb;
-      border-radius: 10px;
       padding: 12px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
     }
 
     .error {
-      color: #a4001d;
-      background: #fff4f5;
-      border: 1px solid #f0c9cf;
-      border-radius: 10px;
       padding: 12px;
+      background: #fff5f5;
+      border: 1px solid #f3c7c7;
+      border-radius: 10px;
+      color: #a4001d;
       white-space: pre-wrap;
       font-size: 14px;
     }
 
-    .table-scroller {
+    .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      border: 1px solid #e3e6eb;
+      border: 1px solid #e5e7eb;
       border-radius: 12px;
       background: #fff;
     }
 
     table {
       width: 100%;
-      min-width: 2300px;
+      min-width: 2400px;
       border-collapse: collapse;
     }
 
     th, td {
-      border-bottom: 1px solid #eceff3;
       padding: 10px 12px;
-      vertical-align: top;
+      border-bottom: 1px solid #edf0f3;
       text-align: left;
+      vertical-align: top;
       word-break: break-word;
       font-size: 14px;
     }
 
-    thead th {
+    th {
       position: sticky;
       top: 0;
-      background: #f8fafc;
+      background: #f9fafb;
       z-index: 1;
       font-weight: 700;
       white-space: nowrap;
     }
 
     tbody tr:hover {
-      background: #fafcff;
+      background: #fbfdff;
     }
 
     a {
-      color: #1f6feb;
+      color: #2563eb;
       text-decoration: none;
     }
 
@@ -182,24 +179,16 @@
       display: none;
       margin-top: 8px;
       font-size: 13px;
-      color: #666;
+      color: #6b7280;
     }
 
     @media (max-width: 768px) {
       .container { padding: 12px; }
-      .card { padding: 14px; border-radius: 10px; }
-      h1 { font-size: 26px; }
-      .form-grid { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
       .btn-row { flex-direction: column; }
       button { width: 100%; }
       .mobile-hint { display: block; }
-      th, td { font-size: 13px; padding: 8px 10px; }
-    }
-
-    @media (max-width: 480px) {
-      h1 { font-size: 22px; }
-      .subtext, .status, .error { font-size: 13px; }
-      textarea, .field input, .field select, button { font-size: 16px; }
+      h1 { font-size: 24px; }
     }
   </style>
 </head>
@@ -208,11 +197,11 @@
     <div class="card">
       <h1>政府標案查詢工具</h1>
       <div class="subtext">
-        GitHub Pages 純前端版。支援手機與桌機，並可依公告日期區間過濾。
+        純前端版。輸入關鍵字後，先查詢候選標案，再補抓詳細欄位並整合同案資料。
       </div>
 
-      <div class="form-grid">
-        <div class="field">
+      <div class="grid">
+        <div>
           <label for="queries">請輸入關鍵字（每行一筆）</label>
           <textarea id="queries" placeholder="例如：
 屏東縣遙控無人機飛行場地坪延伸工程
@@ -220,12 +209,12 @@
 115年度遙控水上救生無人機採購案"></textarea>
         </div>
 
-        <div class="field">
-          <label for="maxRows">每筆顯示筆數</label>
-          <input id="maxRows" type="number" min="1" max="20" value="5">
+        <div>
+          <label for="maxRows">每筆候選數</label>
+          <input id="maxRows" type="number" min="1" max="20" value="8" />
         </div>
 
-        <div class="field">
+        <div>
           <label for="dateRange">公告日期區間</label>
           <select id="dateRange">
             <option value="7">今天往前 7 天</option>
@@ -238,45 +227,80 @@
       <div class="btn-row">
         <button onclick="searchTender()">查詢</button>
         <button class="secondary" onclick="clearAll()">清空</button>
-        <button class="export-btn" onclick="exportExcel()">匯出 Excel</button>
+        <button class="export" onclick="exportExcel()">匯出 Excel</button>
       </div>
 
-      <div class="mobile-hint">
-        手機上表格可左右滑動查看完整欄位。
-      </div>
+      <div class="mobile-hint">手機上表格可左右滑動查看完整欄位。</div>
     </div>
 
     <div class="card">
       <div id="status" class="status">尚未查詢</div>
     </div>
 
-    <div id="errorWrap" class="card" style="display:none;">
-      <div id="error" class="error"></div>
+    <div id="errorCard" class="card" style="display:none;">
+      <div id="errorBox" class="error"></div>
     </div>
 
     <div id="tableCard" class="card" style="display:none;">
-      <div class="table-scroller" id="tableWrap"></div>
+      <div id="tableWrap" class="table-wrap"></div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
     const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
-    const OPENFUN_BASE_URL = "https://pcc-api.openfun.app";
     let LAST_ROWS = [];
 
-    function esc(v) {
+    function cleanText(v) {
       if (v === null || v === undefined) return "";
-      return String(v)
+      return String(v).replace(/\s+/g, " ").trim();
+    }
+
+    function esc(v) {
+      return cleanText(v)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;");
     }
 
-    function cleanText(v) {
-      if (v === null || v === undefined) return "";
-      return String(v).replace(/\s+/g, " ").trim();
+    function isFilled(v) {
+      return cleanText(v) !== "";
+    }
+
+    function normalizeKey(v) {
+      return cleanText(v).replaceAll("：", ":").toLowerCase();
+    }
+
+    function parseDateNumber(v) {
+      const s = String(v || "").replace(/\D/g, "");
+      return s ? Number(s) : 0;
+    }
+
+    function parseApiDate(v) {
+      const s = String(v || "").replace(/\D/g, "");
+      if (s.length !== 8) return null;
+      const y = Number(s.slice(0, 4));
+      const m = Number(s.slice(4, 6));
+      const d = Number(s.slice(6, 8));
+      const dt = new Date(y, m - 1, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function startOfDay(d) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function isWithinLastNDays(dateValue, days) {
+      const target = parseApiDate(dateValue);
+      if (!target) return false;
+
+      const today = startOfDay(new Date());
+      const start = new Date(today);
+      start.setDate(start.getDate() - Number(days));
+
+      const t = startOfDay(target);
+      return t >= start && t <= today;
     }
 
     async function fetchJson(url) {
@@ -286,279 +310,243 @@
     }
 
     async function searchOne(query) {
-      const url = SEARCH_API_URL + "?query=" + encodeURIComponent(query) + "&page=1";
+      const url = `${SEARCH_API_URL}?query=${encodeURIComponent(query)}&page=1`;
       return await fetchJson(url);
     }
 
-    async function fetchTenderDetail(tenderApiUrl) {
-      if (!tenderApiUrl) return null;
+    async function fetchTenderDetail(url) {
+      if (!isFilled(url)) return null;
       try {
-        return await fetchJson(tenderApiUrl);
+        return await fetchJson(url);
       } catch (e) {
         return null;
       }
     }
 
-    function parseApiDate(dateValue) {
-      const s = String(dateValue || "").replace(/\D/g, "");
-      if (s.length !== 8) return null;
+    function extractDetailObject(obj) {
+      if (!obj || typeof obj !== "object") return {};
 
-      const year = Number(s.slice(0, 4));
-      const month = Number(s.slice(4, 6));
-      const day = Number(s.slice(6, 8));
+      if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
+        return obj.detail;
+      }
 
-      const d = new Date(year, month - 1, day);
-      if (isNaN(d.getTime())) return null;
-      return d;
-    }
+      if (Array.isArray(obj.records) && obj.records.length > 0) {
+        for (const item of obj.records) {
+          if (item && typeof item === "object") {
+            if (item.detail && typeof item.detail === "object") {
+              return item.detail;
+            }
+            if (Object.keys(item).some(k => k.includes(":"))) {
+              return item;
+            }
+          }
+        }
+      }
 
-    function startOfDay(dateObj) {
-      return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-    }
+      if (Object.keys(obj).some(k => k.includes(":"))) {
+        return obj;
+      }
 
-    function isWithinLastNDays(dateValue, days) {
-      const targetDate = parseApiDate(dateValue);
-      if (!targetDate) return false;
-
-      const today = new Date();
-      const end = startOfDay(today);
-      const start = new Date(end);
-      start.setDate(start.getDate() - Number(days));
-
-      const target = startOfDay(targetDate);
-      return target >= start && target <= end;
+      return {};
     }
 
     function pickDetailValue(detail, targetName) {
-  if (!detail || typeof detail !== "object") return "";
+      if (!detail || typeof detail !== "object") return "";
 
-  const normalizedTarget = cleanText(targetName).replaceAll("：", ":");
+      const target = normalizeKey(targetName);
+      const entries = Object.entries(detail);
 
-  const keys = Object.keys(detail);
+      // 1. 完整 key 相等
+      for (const [k, v] of entries) {
+        if (normalizeKey(k) === target) return cleanText(v);
+      }
 
-  // 1. 完整 key 相等
-  for (const key of keys) {
-    const normKey = cleanText(key).replaceAll("：", ":");
-    if (normKey === normalizedTarget) {
-      return cleanText(detail[key]);
-    }
-  }
+      // 2. 最後一段相等
+      for (const [k, v] of entries) {
+        const tail = normalizeKey(k).split(":").pop().trim();
+        if (tail === target) return cleanText(v);
+      }
 
-  // 2. 冒號最後一段相等
-  for (const key of keys) {
-    const normKey = cleanText(key).replaceAll("：", ":");
-    const tail = normKey.split(":").pop().trim();
-    if (tail === normalizedTarget) {
-      return cleanText(detail[key]);
-    }
-  }
+      // 3. 最後一段包含
+      for (const [k, v] of entries) {
+        const tail = normalizeKey(k).split(":").pop().trim();
+        if (tail.includes(target) || target.includes(tail)) return cleanText(v);
+      }
 
-  // 3. 尾段包含目標字
-  for (const key of keys) {
-    const normKey = cleanText(key).replaceAll("：", ":");
-    const tail = normKey.split(":").pop().trim();
-    if (tail.includes(normalizedTarget) || normalizedTarget.includes(tail)) {
-      return cleanText(detail[key]);
-    }
-  }
+      // 4. 全 key 包含
+      for (const [k, v] of entries) {
+        const nk = normalizeKey(k);
+        if (nk.includes(target) || target.includes(nk)) return cleanText(v);
+      }
 
-  // 4. 整個 key 包含目標字
-  for (const key of keys) {
-    const normKey = cleanText(key).replaceAll("：", ":");
-    if (normKey.includes(normalizedTarget) || normalizedTarget.includes(normKey)) {
-      return cleanText(detail[key]);
-    }
-  }
-
-  return "";
-}
-
-    function toDateText(v) {
-      return cleanText(v);
+      return "";
     }
 
-    function toComparableDate(v) {
-  const s = String(v || "").replace(/\D/g, "");
-  return s ? Number(s) : 0;
-}
+    function buildOfficialUrl(rec, detail) {
+      const fromDetail = cleanText(pickDetailValue(detail, "url"));
+      if (fromDetail.startsWith("http://") || fromDetail.startsWith("https://")) {
+        return fromDetail;
+      }
 
-function isFilled(v) {
-  return String(v || "").trim() !== "";
-}
+      const raw = cleanText(rec?.url || "");
+      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
 
-function calcRowCompleteness(row) {
-  const importantFields = [
-    "公告日",
-    "原公告日",
-    "標案案號",
-    "標案名稱",
-    "類型",
-    "分類",
-    "機關代碼",
-    "機關名稱",
-    "單位名稱",
-    "機關地址",
-    "聯絡人",
-    "聯絡電話",
-    "決標方式",
-    "截止投標",
-    "開標時間",
-    "是否異動招標文件",
-    "標案網址",
-    "標案API"
-  ];
+      if (raw) {
+        if (raw.includes("searchTenderDetail") || raw.includes("searchtenderdetail")) {
+          return raw.startsWith("/") ? `https://web.pcc.gov.tw${raw}` : raw;
+        }
+        return raw.startsWith("/") ? `https://pcc-api.openfun.app${raw}` : raw;
+      }
 
-  let score = 0;
-  for (const field of importantFields) {
-    if (isFilled(row[field])) score += 1;
-  }
-  return score;
-}
+      const detailUrl = cleanText(pickDetailValue(detail, "pkpmsmain"));
+      if (detailUrl) {
+        return `https://web.pcc.gov.tw/tps/QueryTender/query/searchTenderDetail?pkPmsMain=${detailUrl}`;
+      }
 
-function mergeTwoRows(baseRow, newRow) {
-  const merged = { ...baseRow };
-
-  // 欄位只要 base 沒值、new 有值，就補進去
-  for (const key of Object.keys(newRow)) {
-    if (!isFilled(merged[key]) && isFilled(newRow[key])) {
-      merged[key] = newRow[key];
+      return "";
     }
-  }
 
-  // 公告日保留較新的
-  const baseDate = toComparableDate(baseRow["公告日"]);
-  const newDate = toComparableDate(newRow["公告日"]);
-  if (newDate > baseDate) {
-    merged["公告日"] = newRow["公告日"];
-  }
-
-  // 若原公告日本來空白，補新值
-  if (!isFilled(merged["原公告日"]) && isFilled(newRow["原公告日"])) {
-    merged["原公告日"] = newRow["原公告日"];
-  }
-
-  // 類型：若 base 沒值就補；若 base 有值但 new 更長，也可考慮更新
-  if ((!isFilled(merged["類型"]) && isFilled(newRow["類型"])) ||
-      (String(newRow["類型"] || "").length > String(merged["類型"] || "").length)) {
-    if (isFilled(newRow["類型"])) merged["類型"] = newRow["類型"];
-  }
-
-  // 分類同理
-  if ((!isFilled(merged["分類"]) && isFilled(newRow["分類"])) ||
-      (String(newRow["分類"] || "").length > String(merged["分類"] || "").length)) {
-    if (isFilled(newRow["分類"])) merged["分類"] = newRow["分類"];
-  }
-
-  // 標案網址 / API 優先保留有值的
-  if (!isFilled(merged["標案網址"]) && isFilled(newRow["標案網址"])) {
-    merged["標案網址"] = newRow["標案網址"];
-  }
-  if (!isFilled(merged["標案API"]) && isFilled(newRow["標案API"])) {
-    merged["標案API"] = newRow["標案API"];
-  }
-
-  return merged;
-}
-
-function dedupeRows(rows) {
-  const mergedMap = new Map();
-
-  for (const row of rows) {
-    const key = [
-      row["原始輸入"] || "",
-      row["機關代碼"] || "",
-      row["標案案號"] || "",
-      row["標案名稱"] || ""
-    ].join("||");
-
-    if (!mergedMap.has(key)) {
-      mergedMap.set(key, { ...row });
-    } else {
-      const existed = mergedMap.get(key);
-      mergedMap.set(key, mergeTwoRows(existed, row));
+    function normalizeTitle(v) {
+      return cleanText(v)
+        .replaceAll("「", "")
+        .replaceAll("」", "")
+        .replaceAll("『", "")
+        .replaceAll("』", "")
+        .replaceAll("（", "(")
+        .replaceAll("）", ")")
+        .replace(/\s+/g, "")
+        .toLowerCase();
     }
-  }
 
-  // 最後再按完整度、公告日排序
-  const result = Array.from(mergedMap.values());
+    function buildGroupKey(row) {
+      const input = cleanText(row["原始輸入"]);
+      const unit = cleanText(row["機關代碼"]);
+      const job = cleanText(row["標案案號"]);
+      const title = normalizeTitle(row["標案名稱"]);
+      return [input, unit, job, title].join("||");
+    }
 
-  result.sort((a, b) => {
-    const scoreDiff = calcRowCompleteness(b) - calcRowCompleteness(a);
-    if (scoreDiff !== 0) return scoreDiff;
+    function calcCompleteness(row) {
+      const fields = [
+        "公告日", "原公告日", "標案案號", "標案名稱",
+        "機關代碼", "機關名稱", "單位名稱", "機關地址",
+        "聯絡人", "聯絡電話", "決標方式",
+        "截止投標", "開標時間", "是否異動招標文件",
+        "標案網址", "標案API"
+      ];
+      let score = 0;
+      for (const f of fields) {
+        if (isFilled(row[f])) score += 1;
+      }
+      return score;
+    }
 
-    return toComparableDate(b["公告日"]) - toComparableDate(a["公告日"]);
-  });
+    function mergeTwoRows(baseRow, newRow) {
+      const merged = { ...baseRow };
 
-  return result;
-}
+      // 空欄補值
+      for (const key of Object.keys(newRow)) {
+        if (!isFilled(merged[key]) && isFilled(newRow[key])) {
+          merged[key] = newRow[key];
+        }
+      }
 
-    function buildCaseUrl(relativeUrl) {
-      const path = cleanText(relativeUrl);
-      if (!path) return "";
-      if (path.startsWith("http://") || path.startsWith("https://")) return path;
-      return OPENFUN_BASE_URL + path;
+      // 公告日取較新
+      if (parseDateNumber(newRow["公告日"]) > parseDateNumber(baseRow["公告日"])) {
+        merged["公告日"] = newRow["公告日"];
+      }
+
+      // 類型 / 分類 / 標案名稱 若新值更長，採新值
+      for (const key of ["類型", "分類", "標案名稱", "機關名稱", "單位名稱", "機關地址"]) {
+        if (cleanText(newRow[key]).length > cleanText(merged[key]).length) {
+          merged[key] = newRow[key];
+        }
+      }
+
+      return merged;
+    }
+
+    function mergeSameTenderRows(rows) {
+      const map = new Map();
+
+      for (const row of rows) {
+        const key = buildGroupKey(row);
+        if (!map.has(key)) {
+          map.set(key, { ...row });
+        } else {
+          const merged = mergeTwoRows(map.get(key), row);
+          map.set(key, merged);
+        }
+      }
+
+      const result = Array.from(map.values());
+      result.sort((a, b) => {
+        const scoreDiff = calcCompleteness(b) - calcCompleteness(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        return parseDateNumber(b["公告日"]) - parseDateNumber(a["公告日"]);
+      });
+
+      return result;
     }
 
     async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
       const searchData = await searchOne(rawQuery);
-      const rawRecords = Array.isArray(searchData.records) ? searchData.records : [];
+      const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-      const filteredByDate = rawRecords.filter(rec => {
-        return isWithinLastNDays(rec.date, dateRangeDays);
-      });
+      const filteredRecords = allRecords
+        .filter(rec => isWithinLastNDays(rec.date, dateRangeDays))
+        .slice(0, maxRows);
 
-      const records = filteredByDate.slice(0, maxRows);
       const rows = [];
 
-      for (const rec of records) {
-        const brief = rec.brief || {};
-        const tenderApiUrl = cleanText(rec.tender_api_url || "");
+      for (const rec of filteredRecords) {
+        const brief = rec?.brief || {};
+        const searchDetail = extractDetailObject(rec);
+        const tenderApiUrl = cleanText(rec?.tender_api_url || "");
+
         const tenderData = await fetchTenderDetail(tenderApiUrl);
+        const tenderDetail = extractDetailObject(tenderData);
 
-        let detail = {};
-        if (tenderData && Array.isArray(tenderData.records) && tenderData.records.length > 0) {
-          detail = tenderData.records[0].detail || {};
-        }
+        // 合併兩個 detail，後者補前者沒有的值
+        const detail = { ...searchDetail, ...tenderDetail };
 
-        const row = {
-          "原始輸入": rawQuery,
-          "公告日": cleanText(rec.date || ""),
+        rows.push({
+          "原始輸入": cleanText(rawQuery),
+          "公告日": cleanText(rec?.date || pickDetailValue(detail, "公告日")),
           "原公告日": pickDetailValue(detail, "原公告日"),
-          "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
-          "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
-          "類型": cleanText(brief.type || ""),
-          "分類": cleanText(brief.category || ""),
-          "機關代碼": cleanText(rec.unit_id || ""),
-          "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
+          "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec?.job_number),
+          "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief?.title),
+          "類型": cleanText(brief?.type || pickDetailValue(detail, "type")),
+          "分類": cleanText(brief?.category || pickDetailValue(detail, "標的分類")),
+          "機關代碼": pickDetailValue(detail, "機關代碼") || cleanText(rec?.unit_id),
+          "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec?.unit_name),
           "單位名稱": pickDetailValue(detail, "單位名稱"),
           "機關地址": pickDetailValue(detail, "機關地址"),
           "聯絡人": pickDetailValue(detail, "聯絡人"),
           "聯絡電話": pickDetailValue(detail, "聯絡電話"),
           "決標方式": pickDetailValue(detail, "決標方式"),
-          "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
-          "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
+          "截止投標": pickDetailValue(detail, "截止投標"),
+          "開標時間": pickDetailValue(detail, "開標時間"),
           "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
-          "標案網址": buildCaseUrl(rec.url || ""),
+          "標案網址": buildOfficialUrl(rec, detail),
           "標案API": tenderApiUrl
-        };
-
-        rows.push(row);
+        });
       }
 
       return rows;
     }
 
     function renderTable(rows) {
-      const tableWrap = document.getElementById("tableWrap");
-      const tableCard = document.getElementById("tableCard");
+      const wrap = document.getElementById("tableWrap");
+      const card = document.getElementById("tableCard");
 
       if (!rows.length) {
-        tableWrap.innerHTML = "<div style='padding:12px;'>查無資料</div>";
-        tableCard.style.display = "block";
+        wrap.innerHTML = "<div style='padding:12px;'>查無資料</div>";
+        card.style.display = "block";
         return;
       }
 
-      const html = `
+      wrap.innerHTML = `
         <table>
           <thead>
             <tr>
@@ -611,15 +599,14 @@ function dedupeRows(rows) {
         </table>
       `;
 
-      tableWrap.innerHTML = html;
-      tableCard.style.display = "block";
+      card.style.display = "block";
     }
 
     function clearAll() {
       document.getElementById("queries").value = "";
       document.getElementById("status").textContent = "尚未查詢";
-      document.getElementById("error").textContent = "";
-      document.getElementById("errorWrap").style.display = "none";
+      document.getElementById("errorBox").textContent = "";
+      document.getElementById("errorCard").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
       document.getElementById("tableCard").style.display = "none";
       LAST_ROWS = [];
@@ -633,7 +620,7 @@ function dedupeRows(rows) {
 
       const exportRows = LAST_ROWS.map(row => {
         const out = { ...row };
-        if (!out["原公告日"]) delete out["原公告日"];
+        if (!isFilled(out["原公告日"])) delete out["原公告日"];
         return out;
       });
 
@@ -645,23 +632,16 @@ function dedupeRows(rows) {
 
     async function searchTender() {
       const status = document.getElementById("status");
-      const error = document.getElementById("error");
-      const errorWrap = document.getElementById("errorWrap");
+      const errorCard = document.getElementById("errorCard");
+      const errorBox = document.getElementById("errorBox");
       const tableWrap = document.getElementById("tableWrap");
       const tableCard = document.getElementById("tableCard");
 
-      error.textContent = "";
-      errorWrap.style.display = "none";
+      errorBox.textContent = "";
+      errorCard.style.display = "none";
       tableWrap.innerHTML = "";
       tableCard.style.display = "none";
       LAST_ROWS = [];
-
-      const maxRows = Math.max(
-        1,
-        Math.min(20, Number(document.getElementById("maxRows").value || 5))
-      );
-
-      const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
 
       const queries = document.getElementById("queries").value
         .split("\n")
@@ -673,7 +653,10 @@ function dedupeRows(rows) {
         return;
       }
 
-      status.textContent = "查詢中，正在補抓詳細欄位...";
+      const maxRows = Math.max(1, Math.min(20, Number(document.getElementById("maxRows").value || 8)));
+      const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
+
+      status.textContent = "查詢中，正在補抓詳細欄位並整合同案資料...";
       const allRows = [];
       const errs = [];
 
@@ -686,15 +669,16 @@ function dedupeRows(rows) {
         }
       }
 
-      const dedupedRows = dedupeRows(allRows);
+      const mergedRows = mergeSameTenderRows(allRows);
+      LAST_ROWS = mergedRows;
+      renderTable(mergedRows);
 
-      LAST_ROWS = dedupedRows;
-      renderTable(dedupedRows);
-      status.textContent = `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
+      status.textContent =
+        `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，整併後 ${mergedRows.length} 筆`;
 
       if (errs.length) {
-        error.textContent = errs.join("\n");
-        errorWrap.style.display = "block";
+        errorBox.textContent = errs.join("\n");
+        errorCard.style.display = "block";
       }
     }
   </script>
