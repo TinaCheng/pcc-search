@@ -330,36 +330,51 @@
     }
 
     function pickDetailValue(detail, targetName) {
-      if (!detail || typeof detail !== "object") return "";
+  if (!detail || typeof detail !== "object") return "";
 
-      const keys = Object.keys(detail);
+  const normalizedTarget = cleanText(targetName).replaceAll("：", ":");
 
-      for (const key of keys) {
-        if (key === targetName) return cleanText(detail[key]);
-      }
+  const keys = Object.keys(detail);
 
-      for (const key of keys) {
-        const tail = key.split(":").pop().trim();
-        if (tail === targetName) return cleanText(detail[key]);
-      }
-
-      for (const key of keys) {
-        const tail = key.split(":").pop().trim();
-        if (tail.includes(targetName) || targetName.includes(tail)) {
-          return cleanText(detail[key]);
-        }
-      }
-
-      return "";
+  // 1. 完整 key 相等
+  for (const key of keys) {
+    const normKey = cleanText(key).replaceAll("：", ":");
+    if (normKey === normalizedTarget) {
+      return cleanText(detail[key]);
     }
+  }
+
+  // 2. 冒號最後一段相等
+  for (const key of keys) {
+    const normKey = cleanText(key).replaceAll("：", ":");
+    const tail = normKey.split(":").pop().trim();
+    if (tail === normalizedTarget) {
+      return cleanText(detail[key]);
+    }
+  }
+
+  // 3. 尾段包含目標字
+  for (const key of keys) {
+    const normKey = cleanText(key).replaceAll("：", ":");
+    const tail = normKey.split(":").pop().trim();
+    if (tail.includes(normalizedTarget) || normalizedTarget.includes(tail)) {
+      return cleanText(detail[key]);
+    }
+  }
+
+  // 4. 整個 key 包含目標字
+  for (const key of keys) {
+    const normKey = cleanText(key).replaceAll("：", ":");
+    if (normKey.includes(normalizedTarget) || normalizedTarget.includes(normKey)) {
+      return cleanText(detail[key]);
+    }
+  }
+
+  return "";
+}
 
     function toDateText(v) {
       return cleanText(v);
-    }
-
-    function toComparableDate(v) {
-      const s = String(v || "").replace(/\D/g, "");
-      return s ? Number(s) : 0;
     }
 
     function toComparableDate(v) {
@@ -367,9 +382,20 @@
   return s ? Number(s) : 0;
 }
 
+function isFilled(v) {
+  return String(v || "").trim() !== "";
+}
+
 function calcRowCompleteness(row) {
   const importantFields = [
+    "公告日",
     "原公告日",
+    "標案案號",
+    "標案名稱",
+    "類型",
+    "分類",
+    "機關代碼",
+    "機關名稱",
     "單位名稱",
     "機關地址",
     "聯絡人",
@@ -383,18 +409,59 @@ function calcRowCompleteness(row) {
   ];
 
   let score = 0;
-
   for (const field of importantFields) {
-    if (String(row[field] || "").trim()) {
-      score += 1;
-    }
+    if (isFilled(row[field])) score += 1;
   }
-
   return score;
 }
 
+function mergeTwoRows(baseRow, newRow) {
+  const merged = { ...baseRow };
+
+  // 欄位只要 base 沒值、new 有值，就補進去
+  for (const key of Object.keys(newRow)) {
+    if (!isFilled(merged[key]) && isFilled(newRow[key])) {
+      merged[key] = newRow[key];
+    }
+  }
+
+  // 公告日保留較新的
+  const baseDate = toComparableDate(baseRow["公告日"]);
+  const newDate = toComparableDate(newRow["公告日"]);
+  if (newDate > baseDate) {
+    merged["公告日"] = newRow["公告日"];
+  }
+
+  // 若原公告日本來空白，補新值
+  if (!isFilled(merged["原公告日"]) && isFilled(newRow["原公告日"])) {
+    merged["原公告日"] = newRow["原公告日"];
+  }
+
+  // 類型：若 base 沒值就補；若 base 有值但 new 更長，也可考慮更新
+  if ((!isFilled(merged["類型"]) && isFilled(newRow["類型"])) ||
+      (String(newRow["類型"] || "").length > String(merged["類型"] || "").length)) {
+    if (isFilled(newRow["類型"])) merged["類型"] = newRow["類型"];
+  }
+
+  // 分類同理
+  if ((!isFilled(merged["分類"]) && isFilled(newRow["分類"])) ||
+      (String(newRow["分類"] || "").length > String(merged["分類"] || "").length)) {
+    if (isFilled(newRow["分類"])) merged["分類"] = newRow["分類"];
+  }
+
+  // 標案網址 / API 優先保留有值的
+  if (!isFilled(merged["標案網址"]) && isFilled(newRow["標案網址"])) {
+    merged["標案網址"] = newRow["標案網址"];
+  }
+  if (!isFilled(merged["標案API"]) && isFilled(newRow["標案API"])) {
+    merged["標案API"] = newRow["標案API"];
+  }
+
+  return merged;
+}
+
 function dedupeRows(rows) {
-  const bestMap = new Map();
+  const mergedMap = new Map();
 
   for (const row of rows) {
     const key = [
@@ -404,31 +471,25 @@ function dedupeRows(rows) {
       row["標案名稱"] || ""
     ].join("||");
 
-    const currentCompleteness = calcRowCompleteness(row);
-    const currentDate = toComparableDate(row["公告日"]);
-    const existed = bestMap.get(key);
-
-    if (!existed) {
-      bestMap.set(key, row);
-      continue;
-    }
-
-    const existedCompleteness = calcRowCompleteness(existed);
-    const existedDate = toComparableDate(existed["公告日"]);
-
-    // 先比完整度
-    if (currentCompleteness > existedCompleteness) {
-      bestMap.set(key, row);
-      continue;
-    }
-
-    // 完整度一樣時，再比日期
-    if (currentCompleteness === existedCompleteness && currentDate > existedDate) {
-      bestMap.set(key, row);
+    if (!mergedMap.has(key)) {
+      mergedMap.set(key, { ...row });
+    } else {
+      const existed = mergedMap.get(key);
+      mergedMap.set(key, mergeTwoRows(existed, row));
     }
   }
 
-  return Array.from(bestMap.values());
+  // 最後再按完整度、公告日排序
+  const result = Array.from(mergedMap.values());
+
+  result.sort((a, b) => {
+    const scoreDiff = calcRowCompleteness(b) - calcRowCompleteness(a);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    return toComparableDate(b["公告日"]) - toComparableDate(a["公告日"]);
+  });
+
+  return result;
 }
 
     function buildCaseUrl(relativeUrl) {
