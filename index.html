@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>政府標案查詢工具</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -16,7 +18,7 @@
     }
 
     .container {
-      max-width: 1380px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -110,6 +112,7 @@
 
     button.export {
       background: #0f9d58;
+      color: #fff;
     }
 
     .status {
@@ -130,6 +133,18 @@
       font-size: 14px;
     }
 
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .toolbar button {
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+
     .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -140,7 +155,7 @@
 
     table {
       width: 100%;
-      min-width: 2400px;
+      min-width: 2550px;
       border-collapse: collapse;
     }
 
@@ -182,13 +197,49 @@
       color: #6b7280;
     }
 
+    .checkbox-cell {
+      width: 52px;
+      text-align: center;
+    }
+
+    .checkbox-cell input {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
     @media (max-width: 768px) {
-      .container { padding: 12px; }
-      .grid { grid-template-columns: 1fr; }
-      .btn-row { flex-direction: column; }
-      button { width: 100%; }
-      .mobile-hint { display: block; }
-      h1 { font-size: 24px; }
+      .container {
+        padding: 12px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-row {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .toolbar {
+        flex-direction: column;
+      }
+
+      .toolbar button {
+        width: 100%;
+      }
+
+      .mobile-hint {
+        display: block;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
@@ -197,7 +248,7 @@
     <div class="card">
       <h1>政府標案查詢工具</h1>
       <div class="subtext">
-        純前端版。輸入關鍵字後，先查詢候選標案，再補抓詳細欄位並整合同案資料。
+        純前端版。依關鍵字查詢候選標案，再補抓詳細資料。匯出 Excel 時，只有打勾的列會被匯出。
       </div>
 
       <div class="grid">
@@ -230,7 +281,9 @@
         <button class="export" onclick="exportExcel()">匯出 Excel</button>
       </div>
 
-      <div class="mobile-hint">手機上表格可左右滑動查看完整欄位。</div>
+      <div class="mobile-hint">
+        手機上表格可左右滑動查看完整欄位。
+      </div>
     </div>
 
     <div class="card">
@@ -242,6 +295,10 @@
     </div>
 
     <div id="tableCard" class="card" style="display:none;">
+      <div class="toolbar">
+        <button class="secondary" onclick="selectAllRows()">全選</button>
+        <button class="secondary" onclick="clearAllSelections()">全部取消</button>
+      </div>
       <div id="tableWrap" class="table-wrap"></div>
     </div>
   </div>
@@ -251,11 +308,20 @@
     const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
     let LAST_ROWS = [];
 
+    /*
+      cleanText
+      把 null / undefined 轉成空字串，並清掉多餘空白。
+      幾乎所有欄位輸出前都先走這個函式，避免畫面髒亂。
+    */
     function cleanText(v) {
       if (v === null || v === undefined) return "";
       return String(v).replace(/\s+/g, " ").trim();
     }
 
+    /*
+      esc
+      將文字做 HTML escape，避免特殊字元直接插進 table 造成畫面錯亂。
+    */
     function esc(v) {
       return cleanText(v)
         .replaceAll("&", "&amp;")
@@ -264,147 +330,30 @@
         .replaceAll('"', "&quot;");
     }
 
+    /*
+      isFilled
+      判斷一個值是不是有內容。
+    */
     function isFilled(v) {
       return cleanText(v) !== "";
     }
 
+    /*
+      normalizeKey
+      把 detail 裡的欄位名稱正規化，方便比對。
+      例如：
+      招標資料:原公告日
+      領投開標:截止投標
+    */
     function normalizeKey(v) {
       return cleanText(v).replaceAll("：", ":").toLowerCase();
     }
 
-    function parseDateNumber(v) {
-      const s = String(v || "").replace(/\D/g, "");
-      return s ? Number(s) : 0;
-    }
-
-    function parseApiDate(v) {
-      const s = String(v || "").replace(/\D/g, "");
-      if (s.length !== 8) return null;
-      const y = Number(s.slice(0, 4));
-      const m = Number(s.slice(4, 6));
-      const d = Number(s.slice(6, 8));
-      const dt = new Date(y, m - 1, d);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
-
-    function startOfDay(d) {
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    }
-
-    function isWithinLastNDays(dateValue, days) {
-      const target = parseApiDate(dateValue);
-      if (!target) return false;
-
-      const today = startOfDay(new Date());
-      const start = new Date(today);
-      start.setDate(start.getDate() - Number(days));
-
-      const t = startOfDay(target);
-      return t >= start && t <= today;
-    }
-
-    async function fetchJson(url) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}：${url}`);
-      return await res.json();
-    }
-
-    async function searchOne(query) {
-      const url = `${SEARCH_API_URL}?query=${encodeURIComponent(query)}&page=1`;
-      return await fetchJson(url);
-    }
-
-    async function fetchTenderDetail(url) {
-      if (!isFilled(url)) return null;
-      try {
-        return await fetchJson(url);
-      } catch (e) {
-        return null;
-      }
-    }
-
-    function extractDetailObject(obj) {
-  if (!obj || typeof obj !== "object") return {};
-
-  // 若本身就是 detail 物件
-  if (!Array.isArray(obj) && Object.keys(obj).some(k => k.includes(":"))) {
-    return obj;
-  }
-
-  // 若是單筆 record 且內含 detail
-  if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
-    return obj.detail;
-  }
-
-  // 若是 API 回傳，固定抓 records 最後一筆的 detail
-  if (Array.isArray(obj.records) && obj.records.length > 0) {
-    const lastRecord = obj.records[obj.records.length - 1];
-    if (lastRecord && typeof lastRecord === "object") {
-      if (lastRecord.detail && typeof lastRecord.detail === "object") {
-        return lastRecord.detail;
-      }
-    }
-  }
-
-  return {};
-}
-
-    function pickDetailValue(detail, targetName) {
-      if (!detail || typeof detail !== "object") return "";
-
-      const target = normalizeKey(targetName);
-      const entries = Object.entries(detail);
-
-      // 1. 完整 key 相等
-      for (const [k, v] of entries) {
-        if (normalizeKey(k) === target) return cleanText(v);
-      }
-
-      // 2. 最後一段相等
-      for (const [k, v] of entries) {
-        const tail = normalizeKey(k).split(":").pop().trim();
-        if (tail === target) return cleanText(v);
-      }
-
-      // 3. 最後一段包含
-      for (const [k, v] of entries) {
-        const tail = normalizeKey(k).split(":").pop().trim();
-        if (tail.includes(target) || target.includes(tail)) return cleanText(v);
-      }
-
-      // 4. 全 key 包含
-      for (const [k, v] of entries) {
-        const nk = normalizeKey(k);
-        if (nk.includes(target) || target.includes(nk)) return cleanText(v);
-      }
-
-      return "";
-    }
-
-    function buildOfficialUrl(rec, detail) {
-      const fromDetail = cleanText(pickDetailValue(detail, "url"));
-      if (fromDetail.startsWith("http://") || fromDetail.startsWith("https://")) {
-        return fromDetail;
-      }
-
-      const raw = cleanText(rec?.url || "");
-      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-
-      if (raw) {
-        if (raw.includes("searchTenderDetail") || raw.includes("searchtenderdetail")) {
-          return raw.startsWith("/") ? `https://web.pcc.gov.tw${raw}` : raw;
-        }
-        return raw.startsWith("/") ? `https://pcc-api.openfun.app${raw}` : raw;
-      }
-
-      const detailUrl = cleanText(pickDetailValue(detail, "pkpmsmain"));
-      if (detailUrl) {
-        return `https://web.pcc.gov.tw/tps/QueryTender/query/searchTenderDetail?pkPmsMain=${detailUrl}`;
-      }
-
-      return "";
-    }
-
+    /*
+      normalizeTitle
+      將標題做正規化，用於「同案判斷」。
+      會移除部分符號與空白，降低相同標題因格式差異而判成不同案的機率。
+    */
     function normalizeTitle(v) {
       return cleanText(v)
         .replaceAll("「", "")
@@ -417,150 +366,288 @@
         .toLowerCase();
     }
 
-    function buildGroupKey(row) {
-      const input = cleanText(row["原始輸入"]);
-      const unit = cleanText(row["機關代碼"]);
-      const job = cleanText(row["標案案號"]);
-      const title = normalizeTitle(row["標案名稱"]);
-      return [input, unit, job, title].join("||");
+    /*
+      parseDateNumber
+      將日期字串轉成純數字，方便比較大小。
+      例如：
+      20260306 -> 20260306
+      115/03/04 -> 1150304
+    */
+    function parseDateNumber(v) {
+      const s = String(v || "").replace(/\D/g, "");
+      return s ? Number(s) : 0;
     }
 
-    function calcCompleteness(row) {
-      const fields = [
-        "公告日", "原公告日", "標案案號", "標案名稱",
-        "機關代碼", "機關名稱", "單位名稱", "機關地址",
-        "聯絡人", "聯絡電話", "決標方式",
-        "截止投標", "開標時間", "是否異動招標文件",
-        "標案網址", "標案API"
-      ];
-      let score = 0;
-      for (const f of fields) {
-        if (isFilled(row[f])) score += 1;
+    /*
+      parseApiDate
+      searchbytitle 的 rec.date 格式通常是 YYYYMMDD。
+      這個函式把它轉成 JavaScript Date 方便日期區間判斷。
+    */
+    function parseApiDate(v) {
+      const s = String(v || "").replace(/\D/g, "");
+      if (s.length !== 8) return null;
+
+      const y = Number(s.slice(0, 4));
+      const m = Number(s.slice(4, 6));
+      const d = Number(s.slice(6, 8));
+
+      const dt = new Date(y, m - 1, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    /*
+      startOfDay
+      將日期歸零到當天 00:00:00，避免時分秒干擾比較。
+    */
+    function startOfDay(d) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    /*
+      isWithinLastNDays
+      判斷某筆公告日期是否位於：
+      今天往前 N 天 ~ 今天
+    */
+    function isWithinLastNDays(dateValue, days) {
+      const target = parseApiDate(dateValue);
+      if (!target) return false;
+
+      const today = startOfDay(new Date());
+      const start = new Date(today);
+      start.setDate(start.getDate() - Number(days));
+
+      const t = startOfDay(target);
+      return t >= start && t <= today;
+    }
+
+    /*
+      fetchJson
+      共用的 fetch 包裝。
+      用來呼叫 API 並回傳 JSON。
+      若 HTTP 非 200，直接丟出錯誤。
+    */
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}：${url}`);
       }
-      return score;
+      return await res.json();
     }
 
-    function mergeTwoRows(baseRow, newRow) {
-      const merged = { ...baseRow };
+    /*
+      searchOne
+      呼叫 searchbytitle API。
+      依使用者輸入關鍵字查詢候選標案。
+    */
+    async function searchOne(query) {
+      const url = `${SEARCH_API_URL}?query=${encodeURIComponent(query)}&page=1`;
+      return await fetchJson(url);
+    }
 
-      // 空欄補值
-      for (const key of Object.keys(newRow)) {
-        if (!isFilled(merged[key]) && isFilled(newRow[key])) {
-          merged[key] = newRow[key];
+    /*
+      fetchTenderDetail
+      呼叫 tender_api_url 取得更完整的單案詳細資料。
+      若失敗則回傳 null，不讓整體流程中斷。
+    */
+    async function fetchTenderDetail(url) {
+      if (!isFilled(url)) return null;
+
+      try {
+        return await fetchJson(url);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /*
+      extractDetailObject
+      這是這版的核心規則：
+      API 回傳有 records 陣列時，固定抓最後一筆 records 的 detail。
+      因為你已驗證：最後一筆 detail 才是你要的完整欄位來源。
+    */
+    function extractDetailObject(obj) {
+      if (!obj || typeof obj !== "object") return {};
+
+      // 若傳進來本身就是 detail 物件
+      if (!Array.isArray(obj) && Object.keys(obj).some(k => k.includes(":"))) {
+        return obj;
+      }
+
+      // 若是單筆 record，且裡面有 detail
+      if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
+        return obj.detail;
+      }
+
+      // 若是 API 回傳，固定抓 records 最後一筆的 detail
+      if (Array.isArray(obj.records) && obj.records.length > 0) {
+        const lastRecord = obj.records[obj.records.length - 1];
+        if (lastRecord && typeof lastRecord === "object") {
+          if (lastRecord.detail && typeof lastRecord.detail === "object") {
+            return lastRecord.detail;
+          }
         }
       }
 
-      // 公告日取較新
-      if (parseDateNumber(newRow["公告日"]) > parseDateNumber(baseRow["公告日"])) {
-        merged["公告日"] = newRow["公告日"];
-      }
-
-      // 類型 / 分類 / 標案名稱 若新值更長，採新值
-      for (const key of ["類型", "分類", "標案名稱", "機關名稱", "單位名稱", "機關地址"]) {
-        if (cleanText(newRow[key]).length > cleanText(merged[key]).length) {
-          merged[key] = newRow[key];
-        }
-      }
-
-      return merged;
+      return {};
     }
 
-    function mergeSameTenderRows(rows) {
-      const map = new Map();
+    /*
+      pickDetailValue
+      從 detail 物件中抓某欄位。
+      會做多層比對：
+      1. 完整 key 相等
+      2. 冒號最後一段相等
+      3. 最後一段包含目標字
+      4. 整個 key 包含目標字
+    */
+    function pickDetailValue(detail, targetName) {
+      if (!detail || typeof detail !== "object") return "";
 
-      for (const row of rows) {
-        const key = buildGroupKey(row);
-        if (!map.has(key)) {
-          map.set(key, { ...row });
-        } else {
-          const merged = mergeTwoRows(map.get(key), row);
-          map.set(key, merged);
-        }
+      const target = normalizeKey(targetName);
+      const entries = Object.entries(detail);
+
+      for (const [k, v] of entries) {
+        if (normalizeKey(k) === target) return cleanText(v);
       }
 
-      const result = Array.from(map.values());
-      result.sort((a, b) => {
-        const scoreDiff = calcCompleteness(b) - calcCompleteness(a);
-        if (scoreDiff !== 0) return scoreDiff;
-        return parseDateNumber(b["公告日"]) - parseDateNumber(a["公告日"]);
+      for (const [k, v] of entries) {
+        const tail = normalizeKey(k).split(":").pop().trim();
+        if (tail === target) return cleanText(v);
+      }
+
+      for (const [k, v] of entries) {
+        const tail = normalizeKey(k).split(":").pop().trim();
+        if (tail.includes(target) || target.includes(tail)) return cleanText(v);
+      }
+
+      for (const [k, v] of entries) {
+        const nk = normalizeKey(k);
+        if (nk.includes(target) || target.includes(nk)) return cleanText(v);
+      }
+
+      return "";
+    }
+
+    /*
+      buildOfficialUrl
+      產生可開啟的標案網址。
+      優先使用 detail 中的完整 url；
+      否則退回 rec.url。
+    */
+    function buildOfficialUrl(rec, detail) {
+      const detailUrl = cleanText(pickDetailValue(detail, "url"));
+      if (detailUrl.startsWith("http://") || detailUrl.startsWith("https://")) {
+        return detailUrl;
+      }
+
+      const raw = cleanText(rec?.url || "");
+      if (raw.startsWith("http://") || raw.startsWith("https://")) {
+        return raw;
+      }
+
+      if (raw) {
+        if (raw.startsWith("/")) {
+          if (raw.includes("searchTenderDetail") || raw.includes("searchtenderdetail")) {
+            return `https://web.pcc.gov.tw${raw}`;
+          }
+          return `https://pcc-api.openfun.app${raw}`;
+        }
+        return raw;
+      }
+
+      return "";
+    }
+
+    /*
+      buildRowsForQuery
+      這是單一查詢詞的主流程：
+      1. searchbytitle 取候選 records
+      2. 先依日期區間過濾
+      3. 同案分組
+      4. 每組固定抓最後一筆 record
+      5. 再用 tender_api_url 補最後一筆 detail
+      6. 組成畫面列資料
+    */
+    async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
+      const searchData = await searchOne(rawQuery);
+      const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
+
+      const filteredRecords = allRecords.filter(rec => {
+        return isWithinLastNDays(rec.date, dateRangeDays);
       });
 
-      return result;
+      // 同案分組
+      const groupedMap = new Map();
+
+      for (const rec of filteredRecords) {
+        const brief = rec?.brief || {};
+        const title = cleanText(brief?.title || "");
+
+        const key = [
+          cleanText(rawQuery),
+          cleanText(rec?.unit_id || ""),
+          cleanText(rec?.job_number || ""),
+          normalizeTitle(title)
+        ].join("||");
+
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, []);
+        }
+
+        groupedMap.get(key).push(rec);
+      }
+
+      const groupedEntries = Array.from(groupedMap.entries()).slice(0, maxRows);
+      const rows = [];
+
+      for (const [, recs] of groupedEntries) {
+        // 同案固定取最後一筆 record
+        const lastSearchRecord = recs[recs.length - 1];
+        const lastBrief = lastSearchRecord?.brief || {};
+
+        // searchbytitle 同案 records 的 detail：抓最後一筆
+        const searchDetail = extractDetailObject({ records: recs });
+
+        // tender_api_url 的 detail：也抓最後一筆
+        const tenderApiUrl = cleanText(lastSearchRecord?.tender_api_url || "");
+        const tenderData = await fetchTenderDetail(tenderApiUrl);
+        const tenderDetail = extractDetailObject(tenderData);
+
+        // tenderDetail 優先，searchDetail 補空缺
+        const finalDetail = { ...searchDetail, ...tenderDetail };
+
+        rows.push({
+          _selected: true,
+          "原始輸入": cleanText(rawQuery),
+          "公告日": cleanText(lastSearchRecord?.date || pickDetailValue(finalDetail, "公告日")),
+          "原公告日": pickDetailValue(finalDetail, "原公告日"),
+          "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
+          "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
+          "類型": cleanText(lastBrief?.type || pickDetailValue(finalDetail, "type")),
+          "分類": cleanText(lastBrief?.category || pickDetailValue(finalDetail, "標的分類")),
+          "機關代碼": pickDetailValue(finalDetail, "機關代碼") || cleanText(lastSearchRecord?.unit_id),
+          "機關名稱": pickDetailValue(finalDetail, "機關名稱") || cleanText(lastSearchRecord?.unit_name),
+          "單位名稱": pickDetailValue(finalDetail, "單位名稱"),
+          "機關地址": pickDetailValue(finalDetail, "機關地址"),
+          "聯絡人": pickDetailValue(finalDetail, "聯絡人"),
+          "聯絡電話": pickDetailValue(finalDetail, "聯絡電話"),
+          "決標方式": pickDetailValue(finalDetail, "決標方式"),
+          "截止投標": pickDetailValue(finalDetail, "截止投標"),
+          "開標時間": pickDetailValue(finalDetail, "開標時間"),
+          "是否異動招標文件": pickDetailValue(finalDetail, "是否異動招標文件"),
+          "標案網址": buildOfficialUrl(lastSearchRecord, finalDetail),
+          "標案API": tenderApiUrl
+        });
+      }
+
+      return rows;
     }
 
-    async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
-  const searchData = await searchOne(rawQuery);
-  const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
-
-  const filteredRecords = allRecords.filter(rec => {
-    return isWithinLastNDays(rec.date, dateRangeDays);
-  });
-
-  // 先依同案分組
-  const groupedMap = new Map();
-
-  for (const rec of filteredRecords) {
-    const brief = rec?.brief || {};
-    const title = cleanText(brief?.title || "");
-    const key = [
-      cleanText(rawQuery),
-      cleanText(rec?.unit_id || ""),
-      cleanText(rec?.job_number || ""),
-      normalizeTitle(title)
-    ].join("||");
-
-    if (!groupedMap.has(key)) {
-      groupedMap.set(key, []);
-    }
-    groupedMap.get(key).push(rec);
-  }
-
-  const groupedEntries = Array.from(groupedMap.entries()).slice(0, maxRows);
-  const rows = [];
-
-  for (const [, recs] of groupedEntries) {
-    // searchbytitle 同案資料：固定取最後一筆 record
-    const lastSearchRecord = recs[recs.length - 1];
-    const lastBrief = lastSearchRecord?.brief || {};
-    const searchDetail = extractDetailObject({ records: recs });
-
-    const tenderApiUrl = cleanText(lastSearchRecord?.tender_api_url || "");
-    const tenderData = await fetchTenderDetail(tenderApiUrl);
-
-    // tender API 也固定抓最後一筆 detail
-    const tenderDetail = extractDetailObject(tenderData);
-
-    // tenderDetail 優先，searchDetail 補空欄
-    const finalDetail = { ...searchDetail, ...tenderDetail };
-
-    const row = {
-      "原始輸入": cleanText(rawQuery),
-      "公告日": cleanText(lastSearchRecord?.date || pickDetailValue(finalDetail, "公告日")),
-      "原公告日": pickDetailValue(finalDetail, "原公告日"),
-      "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
-      "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
-      "類型": cleanText(lastBrief?.type || pickDetailValue(finalDetail, "type")),
-      "分類": cleanText(lastBrief?.category || pickDetailValue(finalDetail, "標的分類")),
-      "機關代碼": pickDetailValue(finalDetail, "機關代碼") || cleanText(lastSearchRecord?.unit_id),
-      "機關名稱": pickDetailValue(finalDetail, "機關名稱") || cleanText(lastSearchRecord?.unit_name),
-      "單位名稱": pickDetailValue(finalDetail, "單位名稱"),
-      "機關地址": pickDetailValue(finalDetail, "機關地址"),
-      "聯絡人": pickDetailValue(finalDetail, "聯絡人"),
-      "聯絡電話": pickDetailValue(finalDetail, "聯絡電話"),
-      "決標方式": pickDetailValue(finalDetail, "決標方式"),
-      "截止投標": pickDetailValue(finalDetail, "截止投標"),
-      "開標時間": pickDetailValue(finalDetail, "開標時間"),
-      "是否異動招標文件": pickDetailValue(finalDetail, "是否異動招標文件"),
-      "標案網址": buildOfficialUrl(lastSearchRecord, finalDetail),
-      "標案API": tenderApiUrl
-    };
-
-    rows.push(row);
-  }
-
-  return rows;
-}
-
+    /*
+      renderTable
+      將 LAST_ROWS 渲染成表格。
+      每列前面會放 checkbox，供使用者決定是否匯出。
+    */
     function renderTable(rows) {
       const wrap = document.getElementById("tableWrap");
       const card = document.getElementById("tableCard");
@@ -575,6 +662,7 @@
         <table>
           <thead>
             <tr>
+              <th class="checkbox-cell">勾選</th>
               <th>原始輸入</th>
               <th>公告日</th>
               <th>原公告日</th>
@@ -597,8 +685,11 @@
             </tr>
           </thead>
           <tbody>
-            ${rows.map(r => `
+            ${rows.map((r, index) => `
               <tr>
+                <td class="checkbox-cell">
+                  <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
+                </td>
                 <td>${esc(r["原始輸入"])}</td>
                 <td>${esc(r["公告日"])}</td>
                 <td>${esc(r["原公告日"])}</td>
@@ -627,6 +718,38 @@
       card.style.display = "block";
     }
 
+    /*
+      toggleRowSelection
+      使用者勾選 / 取消某一列時，更新 LAST_ROWS 內的 _selected 狀態。
+    */
+    function toggleRowSelection(index, checked) {
+      if (LAST_ROWS[index]) {
+        LAST_ROWS[index]._selected = checked;
+      }
+    }
+
+    /*
+      selectAllRows
+      將目前表格內所有列全部打勾。
+    */
+    function selectAllRows() {
+      LAST_ROWS = LAST_ROWS.map(row => ({ ...row, _selected: true }));
+      renderTable(LAST_ROWS);
+    }
+
+    /*
+      clearAllSelections
+      將目前表格內所有列全部取消勾選。
+    */
+    function clearAllSelections() {
+      LAST_ROWS = LAST_ROWS.map(row => ({ ...row, _selected: false }));
+      renderTable(LAST_ROWS);
+    }
+
+    /*
+      clearAll
+      清空輸入與結果畫面。
+    */
     function clearAll() {
       document.getElementById("queries").value = "";
       document.getElementById("status").textContent = "尚未查詢";
@@ -637,15 +760,27 @@
       LAST_ROWS = [];
     }
 
+    /*
+      exportExcel
+      只匯出目前有勾選的列。
+      若原公告日空白，匯出時自動刪除該欄位。
+    */
     function exportExcel() {
-      if (!LAST_ROWS.length) {
-        alert("目前沒有可匯出的資料");
+      const selectedRows = LAST_ROWS.filter(row => row._selected);
+
+      if (!selectedRows.length) {
+        alert("目前沒有勾選任何資料，無法匯出 Excel");
         return;
       }
 
-      const exportRows = LAST_ROWS.map(row => {
+      const exportRows = selectedRows.map(row => {
         const out = { ...row };
-        if (!isFilled(out["原公告日"])) delete out["原公告日"];
+        delete out._selected;
+
+        if (!isFilled(out["原公告日"])) {
+          delete out["原公告日"];
+        }
+
         return out;
       });
 
@@ -655,6 +790,14 @@
       XLSX.writeFile(wb, "政府標案查詢結果.xlsx");
     }
 
+    /*
+      searchTender
+      主查詢流程：
+      1. 讀取輸入條件
+      2. 逐行查詢
+      3. 組成 LAST_ROWS
+      4. 顯示表格
+    */
     async function searchTender() {
       const status = document.getElementById("status");
       const errorCard = document.getElementById("errorCard");
@@ -678,10 +821,14 @@
         return;
       }
 
-      const maxRows = Math.max(1, Math.min(20, Number(document.getElementById("maxRows").value || 8)));
+      const maxRows = Math.max(
+        1,
+        Math.min(20, Number(document.getElementById("maxRows").value || 8))
+      );
+
       const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
 
-      status.textContent = "查詢中，正在補抓詳細欄位並整合同案資料...";
+      status.textContent = "查詢中，正在補抓詳細欄位...";
       const allRows = [];
       const errs = [];
 
@@ -695,11 +842,11 @@
       }
 
       LAST_ROWS = allRows;
-renderTable(allRows);
+      renderTable(allRows);
 
-status.textContent =
-  `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
-      
+      status.textContent =
+        `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+
       if (errs.length) {
         errorBox.textContent = errs.join("\n");
         errorCard.style.display = "block";
