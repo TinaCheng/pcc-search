@@ -57,32 +57,34 @@
       border-radius: 10px;
       resize: vertical;
       outline: none;
+      background: #fff;
     }
 
     textarea:focus,
-input:focus,
-select:focus {
-  border-color: #4c8bf5;
-  box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
-}
+    input:focus,
+    select:focus {
+      border-color: #4c8bf5;
+      box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
+    }
 
     .form-grid {
-  display: grid;
-  grid-template-columns: 1fr 180px 220px;
-  gap: 12px;
-  align-items: end;
-}
+      display: grid;
+      grid-template-columns: 1fr 180px 220px;
+      gap: 12px;
+      align-items: end;
+    }
 
     .field input,
-.field select {
-  width: 100%;
-  height: 46px;
-  font-size: 16px;
-  padding: 10px 12px;
-  border: 1px solid #cfd6df;
-  border-radius: 10px;
-  background: #fff;
-}
+    .field select {
+      width: 100%;
+      height: 46px;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid #cfd6df;
+      border-radius: 10px;
+      background: #fff;
+      outline: none;
+    }
 
     .btn-row {
       display: flex;
@@ -141,7 +143,7 @@ select:focus {
 
     table {
       width: 100%;
-      min-width: 2000px;
+      min-width: 2300px;
       border-collapse: collapse;
     }
 
@@ -197,7 +199,7 @@ select:focus {
     @media (max-width: 480px) {
       h1 { font-size: 22px; }
       .subtext, .status, .error { font-size: 13px; }
-      textarea, .field input, button { font-size: 16px; }
+      textarea, .field input, .field select, button { font-size: 16px; }
     }
   </style>
 </head>
@@ -206,32 +208,32 @@ select:focus {
     <div class="card">
       <h1>政府標案查詢工具</h1>
       <div class="subtext">
-        GitHub Pages 純前端版。可在手機與桌機使用。
+        GitHub Pages 純前端版。支援手機與桌機，並可依公告日期區間過濾。
       </div>
 
       <div class="form-grid">
-  <div class="field">
-    <label for="queries">請輸入關鍵字（每行一筆）</label>
-    <textarea id="queries" placeholder="例如：
-無人機
-遙控
-教育訓練"></textarea>
-  </div>
+        <div class="field">
+          <label for="queries">請輸入關鍵字（每行一筆）</label>
+          <textarea id="queries" placeholder="例如：
+屏東縣遙控無人機飛行場地坪延伸工程
+115年「韌性臺灣-強化各類型義消科技化訓練與精進裝備中程計畫」水下工作無人機1組
+115年度遙控水上救生無人機採購案"></textarea>
+        </div>
 
-  <div class="field">
-    <label for="maxRows">每筆顯示筆數</label>
-    <input id="maxRows" type="number" min="1" max="20" value="5">
-  </div>
+        <div class="field">
+          <label for="maxRows">每筆顯示筆數</label>
+          <input id="maxRows" type="number" min="1" max="20" value="5">
+        </div>
 
-  <div class="field">
-    <label for="dateRange">公告日期區間</label>
-    <select id="dateRange">
-      <option value="7">今天往前 7 天</option>
-      <option value="15" selected>今天往前 15 天</option>
-      <option value="30">今天往前 30 天</option>
-    </select>
-  </div>
-</div>
+        <div class="field">
+          <label for="dateRange">公告日期區間</label>
+          <select id="dateRange">
+            <option value="7">今天往前 7 天</option>
+            <option value="15" selected>今天往前 15 天</option>
+            <option value="30">今天往前 30 天</option>
+          </select>
+        </div>
+      </div>
 
       <div class="btn-row">
         <button onclick="searchTender()">查詢</button>
@@ -260,6 +262,7 @@ select:focus {
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
     const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
+    const OPENFUN_BASE_URL = "https://pcc-api.openfun.app";
     let LAST_ROWS = [];
 
     function esc(v) {
@@ -276,36 +279,6 @@ select:focus {
       return String(v).replace(/\s+/g, " ").trim();
     }
 
-    function parseApiDate(dateValue) {
-      const s = String(dateValue || "").replace(/\D/g, "");
-      if (s.length !== 8) return null;
-
-      const year = Number(s.slice(0, 4));
-      const month = Number(s.slice(4, 6));
-      const day = Number(s.slice(6, 8));
-
-      const d = new Date(year, month - 1, day);
-      if (isNaN(d.getTime())) return null;
-      return d;
-      }
-
-  function startOfDay(dateObj) {
-      return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-    }
-
-function isWithinLastNDays(dateValue, days) {
-  const targetDate = parseApiDate(dateValue);
-  if (!targetDate) return false;
-
-  const today = new Date();
-  const end = startOfDay(today);
-  const start = new Date(end);
-  start.setDate(start.getDate() - Number(days));
-
-  const target = startOfDay(targetDate);
-  return target >= start && target <= end;
-}
-    
     async function fetchJson(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}：${url}`);
@@ -324,6 +297,36 @@ function isWithinLastNDays(dateValue, days) {
       } catch (e) {
         return null;
       }
+    }
+
+    function parseApiDate(dateValue) {
+      const s = String(dateValue || "").replace(/\D/g, "");
+      if (s.length !== 8) return null;
+
+      const year = Number(s.slice(0, 4));
+      const month = Number(s.slice(4, 6));
+      const day = Number(s.slice(6, 8));
+
+      const d = new Date(year, month - 1, day);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    function startOfDay(dateObj) {
+      return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    }
+
+    function isWithinLastNDays(dateValue, days) {
+      const targetDate = parseApiDate(dateValue);
+      if (!targetDate) return false;
+
+      const today = new Date();
+      const end = startOfDay(today);
+      const start = new Date(end);
+      start.setDate(start.getDate() - Number(days));
+
+      const target = startOfDay(targetDate);
+      return target >= start && target <= end;
     }
 
     function pickDetailValue(detail, targetName) {
@@ -354,21 +357,61 @@ function isWithinLastNDays(dateValue, days) {
       return cleanText(v);
     }
 
+    function toComparableDate(v) {
+      const s = String(v || "").replace(/\D/g, "");
+      return s ? Number(s) : 0;
+    }
+
+    function dedupeRows(rows) {
+      const bestMap = new Map();
+
+      for (const row of rows) {
+        const key = [
+          row["原始輸入"] || "",
+          row["機關代碼"] || "",
+          row["標案案號"] || "",
+          row["標案名稱"] || ""
+        ].join("||");
+
+        const currentDate = toComparableDate(row["公告日"]);
+        const existed = bestMap.get(key);
+
+        if (!existed) {
+          bestMap.set(key, row);
+          continue;
+        }
+
+        const existedDate = toComparableDate(existed["公告日"]);
+
+        if (currentDate > existedDate) {
+          bestMap.set(key, row);
+        }
+      }
+
+      return Array.from(bestMap.values());
+    }
+
+    function buildCaseUrl(relativeUrl) {
+      const path = cleanText(relativeUrl);
+      if (!path) return "";
+      if (path.startsWith("http://") || path.startsWith("https://")) return path;
+      return OPENFUN_BASE_URL + path;
+    }
+
     async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
       const searchData = await searchOne(rawQuery);
       const rawRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-const filteredByDate = rawRecords.filter(rec => {
-  return isWithinLastNDays(rec.date, dateRangeDays);
-});
+      const filteredByDate = rawRecords.filter(rec => {
+        return isWithinLastNDays(rec.date, dateRangeDays);
+      });
 
-const records = filteredByDate.slice(0, maxRows);
-
+      const records = filteredByDate.slice(0, maxRows);
       const rows = [];
 
       for (const rec of records) {
         const brief = rec.brief || {};
-        const tenderApiUrl = rec.tender_api_url || "";
+        const tenderApiUrl = cleanText(rec.tender_api_url || "");
         const tenderData = await fetchTenderDetail(tenderApiUrl);
 
         let detail = {};
@@ -377,26 +420,26 @@ const records = filteredByDate.slice(0, maxRows);
         }
 
         const row = {
-  "原始輸入": rawQuery,
-  "公告日": cleanText(rec.date || ""),
-  "原公告日": pickDetailValue(detail, "原公告日"),
-  "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
-  "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
-  "類型": cleanText(brief.type || ""),
-  "分類": cleanText(brief.category || ""),
-  "機關代碼": cleanText(rec.unit_id || ""),
-  "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
-  "單位名稱": pickDetailValue(detail, "單位名稱"),
-  "機關地址": pickDetailValue(detail, "機關地址"),
-  "聯絡人": pickDetailValue(detail, "聯絡人"),
-  "聯絡電話": pickDetailValue(detail, "聯絡電話"),
-  "決標方式": pickDetailValue(detail, "決標方式"),
-  "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
-  "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
-  "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
-  "標案網址": cleanText(rec.url || ""),
-  "標案API": cleanText(tenderApiUrl)
-};
+          "原始輸入": rawQuery,
+          "公告日": cleanText(rec.date || ""),
+          "原公告日": pickDetailValue(detail, "原公告日"),
+          "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
+          "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
+          "類型": cleanText(brief.type || ""),
+          "分類": cleanText(brief.category || ""),
+          "機關代碼": cleanText(rec.unit_id || ""),
+          "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
+          "單位名稱": pickDetailValue(detail, "單位名稱"),
+          "機關地址": pickDetailValue(detail, "機關地址"),
+          "聯絡人": pickDetailValue(detail, "聯絡人"),
+          "聯絡電話": pickDetailValue(detail, "聯絡電話"),
+          "決標方式": pickDetailValue(detail, "決標方式"),
+          "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
+          "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
+          "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
+          "標案網址": buildCaseUrl(rec.url || ""),
+          "標案API": tenderApiUrl
+        };
 
         rows.push(row);
       }
@@ -404,40 +447,6 @@ const records = filteredByDate.slice(0, maxRows);
       return rows;
     }
 
-    function toComparableDate(v) {
-  const s = String(v || "").replace(/\D/g, "");
-  return s ? Number(s) : 0;
-}
-
-function dedupeRows(rows) {
-  const bestMap = new Map();
-
-  for (const row of rows) {
-    const key = [
-      row["原始輸入"] || "",
-      row["機關代碼"] || "",
-      row["標案案號"] || "",
-      row["標案名稱"] || ""
-    ].join("||");
-
-    const currentDate = toComparableDate(row["公告日"]);
-    const existed = bestMap.get(key);
-
-    if (!existed) {
-      bestMap.set(key, row);
-      continue;
-    }
-
-    const existedDate = toComparableDate(existed["公告日"]);
-
-    if (currentDate > existedDate) {
-      bestMap.set(key, row);
-    }
-  }
-
-  return Array.from(bestMap.values());
-}
-    
     function renderTable(rows) {
       const tableWrap = document.getElementById("tableWrap");
       const tableCard = document.getElementById("tableCard");
@@ -493,7 +502,7 @@ function dedupeRows(rows) {
                 <td>${esc(r["截止投標"])}</td>
                 <td>${esc(r["開標時間"])}</td>
                 <td>${esc(r["是否異動招標文件"])}</td>
-                <td>${r["標案網址"] ? `<a href="https://pcc-api.openfun.app${esc(r["標案網址"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
+                <td>${r["標案網址"] ? `<a href="${esc(r["標案網址"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
                 <td>${r["標案API"] ? `<a href="${esc(r["標案API"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
               </tr>
             `).join("")}
@@ -549,8 +558,9 @@ function dedupeRows(rows) {
       const maxRows = Math.max(
         1,
         Math.min(20, Number(document.getElementById("maxRows").value || 5))
-        const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
       );
+
+      const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
 
       const queries = document.getElementById("queries").value
         .split("\n")
@@ -579,7 +589,7 @@ function dedupeRows(rows) {
 
       LAST_ROWS = dedupedRows;
       renderTable(dedupedRows);
-      status.textContent = `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+      status.textContent = `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
 
       if (errs.length) {
         error.textContent = errs.join("\n");
