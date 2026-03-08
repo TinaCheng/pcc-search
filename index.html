@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政府標案查詢工具</title>
+</head>
+<body>
+    <h1>政府標案查詢工具</h1>
+    <p>這是 GitHub Pages 版本。</p>
+
+    <label for="q">請輸入關鍵字：</label>
+    <input id="q" type="text" placeholder="例如：無人機">
+    <button onclick="searchTender()">查詢</button>
+
+    <pre id="result"></pre>
+
+    <script>
+        async function searchTender() {
+            const q = document.getElementById("q").value.trim();
+            const result = document.getElementById("result");
+
+            if (!q) {
+                result.textContent = "請先輸入關鍵字";
+                return;
+            }
+
+            const url =
+                "https://pcc-api.openfun.app/api/searchbytitle?query=" +
+                encodeURIComponent(q) +
+                "&page=1";
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                result.textContent = "查詢失敗：" + err;
+            }
+        }
+    </script>
+</body>
+</html>
