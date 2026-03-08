@@ -264,6 +264,36 @@
       return String(v).replace(/\s+/g, " ").trim();
     }
 
+    function parseApiDate(dateValue) {
+      const s = String(dateValue || "").replace(/\D/g, "");
+      if (s.length !== 8) return null;
+
+      const year = Number(s.slice(0, 4));
+      const month = Number(s.slice(4, 6));
+      const day = Number(s.slice(6, 8));
+
+      const d = new Date(year, month - 1, day);
+      if (isNaN(d.getTime())) return null;
+      return d;
+      }
+
+  function startOfDay(dateObj) {
+      return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    }
+
+function isWithinLast15Days(dateValue) {
+  const targetDate = parseApiDate(dateValue);
+  if (!targetDate) return false;
+
+  const today = new Date();
+  const end = startOfDay(today);
+  const start = new Date(end);
+  start.setDate(start.getDate() - 15);
+
+  const target = startOfDay(targetDate);
+  return target >= start && target <= end;
+}
+    
     async function fetchJson(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}：${url}`);
@@ -314,7 +344,13 @@
 
     async function buildRowsForQuery(rawQuery, maxRows) {
       const searchData = await searchOne(rawQuery);
-      const records = Array.isArray(searchData.records) ? searchData.records.slice(0, maxRows) : [];
+      const rawRecords = Array.isArray(searchData.records) ? searchData.records : [];
+
+      const filteredByDate = rawRecords.filter(rec => {
+      return isWithinLast15Days(rec.date);
+      });
+
+      const records = filteredByDate.slice(0, maxRows);
 
       const rows = [];
 
@@ -527,7 +563,7 @@ function dedupeRows(rows) {
 
       LAST_ROWS = dedupedRows;
       renderTable(dedupedRows);
-      status.textContent = `查詢完成：輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
+      status.textContent = `查詢完成：只保留最近 15 天公告；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
 
       if (errs.length) {
         error.textContent = errs.join("\n");
