@@ -1,43 +1,427 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>政府標案查詢工具</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>政府標案查詢工具</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      background: #f6f7fb;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e3e6eb;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 32px;
+      line-height: 1.2;
+    }
+
+    .subtext {
+      color: #666;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      font-size: 16px;
+      padding: 12px;
+      border: 1px solid #cfd6df;
+      border-radius: 10px;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus,
+    input:focus {
+      border-color: #4c8bf5;
+      box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 180px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field input {
+      width: 100%;
+      height: 46px;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid #cfd6df;
+      border-radius: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #1f6feb;
+      color: #fff;
+    }
+
+    button.secondary {
+      background: #eef3ff;
+      color: #1f4fbf;
+    }
+
+    .status {
+      font-size: 14px;
+      color: #333;
+      background: #f7f8fa;
+      border: 1px solid #e3e6eb;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .error {
+      color: #a4001d;
+      background: #fff4f5;
+      border: 1px solid #f0c9cf;
+      border-radius: 10px;
+      padding: 12px;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+
+    .table-scroller {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid #e3e6eb;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1100px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border-bottom: 1px solid #eceff3;
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      z-index: 1;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover {
+      background: #fafcff;
+    }
+
+    a {
+      color: #1f6feb;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .mobile-hint {
+      display: none;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px;
+      }
+
+      .card {
+        padding: 14px;
+        border-radius: 10px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-row {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .mobile-hint {
+        display: block;
+      }
+
+      th, td {
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 22px;
+      }
+
+      .subtext,
+      .status,
+      .error {
+        font-size: 13px;
+      }
+
+      textarea,
+      .field input,
+      button {
+        font-size: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>政府標案查詢工具</h1>
-    <p>這是 GitHub Pages 版本。</p>
+  <div class="container">
+    <div class="card">
+      <h1>政府標案查詢工具</h1>
+      <div class="subtext">
+        GitHub Pages 純前端版。可在手機與桌機使用。
+      </div>
 
-    <label for="q">請輸入關鍵字：</label>
-    <input id="q" type="text" placeholder="例如：無人機">
-    <button onclick="searchTender()">查詢</button>
+      <div class="form-grid">
+        <div class="field">
+          <label for="queries">請輸入關鍵字（每行一筆）</label>
+          <textarea id="queries" placeholder="例如：
+無人機
+遙控
+教育訓練"></textarea>
+        </div>
 
-    <pre id="result"></pre>
+        <div class="field">
+          <label for="maxRows">每筆顯示筆數</label>
+          <input id="maxRows" type="number" min="1" max="50" value="10">
+        </div>
+      </div>
 
-    <script>
-        async function searchTender() {
-            const q = document.getElementById("q").value.trim();
-            const result = document.getElementById("result");
+      <div class="btn-row">
+        <button onclick="searchTender()">查詢</button>
+        <button class="secondary" onclick="clearAll()">清空</button>
+      </div>
 
-            if (!q) {
-                result.textContent = "請先輸入關鍵字";
-                return;
-            }
+      <div class="mobile-hint">
+        手機上表格可左右滑動查看完整欄位。
+      </div>
+    </div>
 
-            const url =
-                "https://pcc-api.openfun.app/api/searchbytitle?query=" +
-                encodeURIComponent(q) +
-                "&page=1";
+    <div class="card">
+      <div id="status" class="status">尚未查詢</div>
+    </div>
 
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                result.textContent = JSON.stringify(data, null, 2);
-            } catch (err) {
-                result.textContent = "查詢失敗：" + err;
-            }
+    <div id="errorWrap" class="card" style="display:none;">
+      <div id="error" class="error"></div>
+    </div>
+
+    <div id="tableCard" class="card" style="display:none;">
+      <div class="table-scroller" id="tableWrap"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
+
+    function esc(v) {
+      if (v === null || v === undefined) return "";
+      return String(v)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    async function fetchOne(query) {
+      const url = API_URL + "?query=" + encodeURIComponent(query) + "&page=1";
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(query + "：HTTP " + res.status);
+      }
+      return await res.json();
+    }
+
+    function toRows(rawQuery, data, maxRows) {
+      const records = Array.isArray(data.records) ? data.records : [];
+      return records.slice(0, maxRows).map(rec => {
+        const brief = rec.brief || {};
+        return {
+          原始輸入: rawQuery,
+          公告日: rec.date || "",
+          標案案號: rec.job_number || "",
+          標案名稱: brief.title || "",
+          類型: brief.type || "",
+          分類: brief.category || "",
+          機關代碼: rec.unit_id || "",
+          機關名稱: rec.unit_name || "",
+          標案API: rec.tender_api_url || ""
+        };
+      });
+    }
+
+    function renderTable(rows) {
+      const tableWrap = document.getElementById("tableWrap");
+      const tableCard = document.getElementById("tableCard");
+
+      if (!rows.length) {
+        tableWrap.innerHTML = "<div style='padding:12px;'>查無資料</div>";
+        tableCard.style.display = "block";
+        return;
+      }
+
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:120px;">原始輸入</th>
+              <th style="width:100px;">公告日</th>
+              <th style="width:110px;">標案案號</th>
+              <th style="width:300px;">標案名稱</th>
+              <th style="width:200px;">類型</th>
+              <th style="width:180px;">分類</th>
+              <th style="width:120px;">機關代碼</th>
+              <th style="width:160px;">機關名稱</th>
+              <th style="width:140px;">標案 API</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${esc(r.原始輸入)}</td>
+                <td>${esc(r.公告日)}</td>
+                <td>${esc(r.標案案號)}</td>
+                <td>${esc(r.標案名稱)}</td>
+                <td>${esc(r.類型)}</td>
+                <td>${esc(r.分類)}</td>
+                <td>${esc(r.機關代碼)}</td>
+                <td>${esc(r.機關名稱)}</td>
+                <td>${r.標案API ? `<a href="${esc(r.標案API)}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+
+      tableWrap.innerHTML = html;
+      tableCard.style.display = "block";
+    }
+
+    function clearAll() {
+      document.getElementById("queries").value = "";
+      document.getElementById("status").textContent = "尚未查詢";
+      document.getElementById("error").textContent = "";
+      document.getElementById("errorWrap").style.display = "none";
+      document.getElementById("tableWrap").innerHTML = "";
+      document.getElementById("tableCard").style.display = "none";
+    }
+
+    async function searchTender() {
+      const status = document.getElementById("status");
+      const error = document.getElementById("error");
+      const errorWrap = document.getElementById("errorWrap");
+      const tableWrap = document.getElementById("tableWrap");
+      const tableCard = document.getElementById("tableCard");
+
+      error.textContent = "";
+      errorWrap.style.display = "none";
+      tableWrap.innerHTML = "";
+      tableCard.style.display = "none";
+
+      const maxRows = Math.max(
+        1,
+        Math.min(50, Number(document.getElementById("maxRows").value || 10))
+      );
+
+      const queries = document.getElementById("queries").value
+        .split("\n")
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      if (!queries.length) {
+        status.textContent = "請先輸入至少一筆關鍵字";
+        return;
+      }
+
+      status.textContent = "查詢中...";
+      const allRows = [];
+      const errs = [];
+
+      for (const q of queries) {
+        try {
+          const data = await fetchOne(q);
+          const rows = toRows(q, data, maxRows);
+          allRows.push(...rows);
+        } catch (e) {
+          errs.push(String(e.message || e));
         }
-    </script>
+      }
+
+      renderTable(allRows);
+      status.textContent = `查詢完成：輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+
+      if (errs.length) {
+        error.textContent = errs.join("\n");
+        errorWrap.style.display = "block";
+      }
+    }
+  </script>
 </body>
 </html>
