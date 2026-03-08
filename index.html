@@ -60,26 +60,29 @@
     }
 
     textarea:focus,
-    input:focus {
-      border-color: #4c8bf5;
-      box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
-    }
+input:focus,
+select:focus {
+  border-color: #4c8bf5;
+  box-shadow: 0 0 0 3px rgba(76,139,245,0.15);
+}
 
     .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 180px;
-      gap: 12px;
-      align-items: end;
-    }
+  display: grid;
+  grid-template-columns: 1fr 180px 220px;
+  gap: 12px;
+  align-items: end;
+}
 
-    .field input {
-      width: 100%;
-      height: 46px;
-      font-size: 16px;
-      padding: 10px 12px;
-      border: 1px solid #cfd6df;
-      border-radius: 10px;
-    }
+    .field input,
+.field select {
+  width: 100%;
+  height: 46px;
+  font-size: 16px;
+  padding: 10px 12px;
+  border: 1px solid #cfd6df;
+  border-radius: 10px;
+  background: #fff;
+}
 
     .btn-row {
       display: flex;
@@ -207,19 +210,28 @@
       </div>
 
       <div class="form-grid">
-        <div class="field">
-          <label for="queries">請輸入關鍵字（每行一筆）</label>
-          <textarea id="queries" placeholder="例如：
+  <div class="field">
+    <label for="queries">請輸入關鍵字（每行一筆）</label>
+    <textarea id="queries" placeholder="例如：
 無人機
 遙控
 教育訓練"></textarea>
-        </div>
+  </div>
 
-        <div class="field">
-          <label for="maxRows">每筆顯示筆數</label>
-          <input id="maxRows" type="number" min="1" max="20" value="5">
-        </div>
-      </div>
+  <div class="field">
+    <label for="maxRows">每筆顯示筆數</label>
+    <input id="maxRows" type="number" min="1" max="20" value="5">
+  </div>
+
+  <div class="field">
+    <label for="dateRange">公告日期區間</label>
+    <select id="dateRange">
+      <option value="7">今天往前 7 天</option>
+      <option value="15" selected>今天往前 15 天</option>
+      <option value="30">今天往前 30 天</option>
+    </select>
+  </div>
+</div>
 
       <div class="btn-row">
         <button onclick="searchTender()">查詢</button>
@@ -281,14 +293,14 @@
       return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
     }
 
-function isWithinLast15Days(dateValue) {
+function isWithinLastNDays(dateValue, days) {
   const targetDate = parseApiDate(dateValue);
   if (!targetDate) return false;
 
   const today = new Date();
   const end = startOfDay(today);
   const start = new Date(end);
-  start.setDate(start.getDate() - 15);
+  start.setDate(start.getDate() - Number(days));
 
   const target = startOfDay(targetDate);
   return target >= start && target <= end;
@@ -342,15 +354,15 @@ function isWithinLast15Days(dateValue) {
       return cleanText(v);
     }
 
-    async function buildRowsForQuery(rawQuery, maxRows) {
+    async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
       const searchData = await searchOne(rawQuery);
       const rawRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-      const filteredByDate = rawRecords.filter(rec => {
-      return isWithinLast15Days(rec.date);
-      });
+const filteredByDate = rawRecords.filter(rec => {
+  return isWithinLastNDays(rec.date, dateRangeDays);
+});
 
-      const records = filteredByDate.slice(0, maxRows);
+const records = filteredByDate.slice(0, maxRows);
 
       const rows = [];
 
@@ -365,25 +377,26 @@ function isWithinLast15Days(dateValue) {
         }
 
         const row = {
-          "原始輸入": rawQuery,
-          "公告日": cleanText(rec.date || ""),
-          "原公告日": pickDetailValue(detail, "原公告日"),
-          "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
-          "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
-          "類型": cleanText(brief.type || ""),
-          "分類": cleanText(brief.category || ""),
-          "機關代碼": cleanText(rec.unit_id || ""),
-          "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
-          "單位名稱": pickDetailValue(detail, "單位名稱"),
-          "機關地址": pickDetailValue(detail, "機關地址"),
-          "聯絡人": pickDetailValue(detail, "聯絡人"),
-          "聯絡電話": pickDetailValue(detail, "聯絡電話"),
-          "決標方式": pickDetailValue(detail, "決標方式"),
-          "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
-          "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
-          "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
-          "標案API": cleanText(tenderApiUrl)
-        };
+  "原始輸入": rawQuery,
+  "公告日": cleanText(rec.date || ""),
+  "原公告日": pickDetailValue(detail, "原公告日"),
+  "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
+  "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
+  "類型": cleanText(brief.type || ""),
+  "分類": cleanText(brief.category || ""),
+  "機關代碼": cleanText(rec.unit_id || ""),
+  "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
+  "單位名稱": pickDetailValue(detail, "單位名稱"),
+  "機關地址": pickDetailValue(detail, "機關地址"),
+  "聯絡人": pickDetailValue(detail, "聯絡人"),
+  "聯絡電話": pickDetailValue(detail, "聯絡電話"),
+  "決標方式": pickDetailValue(detail, "決標方式"),
+  "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
+  "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
+  "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
+  "標案網址": cleanText(rec.url || ""),
+  "標案API": cleanText(tenderApiUrl)
+};
 
         rows.push(row);
       }
@@ -456,6 +469,7 @@ function dedupeRows(rows) {
               <th>截止投標</th>
               <th>開標時間</th>
               <th>是否異動招標文件</th>
+              <th>標案網址</th>
               <th>標案 API</th>
             </tr>
           </thead>
@@ -479,6 +493,7 @@ function dedupeRows(rows) {
                 <td>${esc(r["截止投標"])}</td>
                 <td>${esc(r["開標時間"])}</td>
                 <td>${esc(r["是否異動招標文件"])}</td>
+                <td>${r["標案網址"] ? `<a href="https://pcc-api.openfun.app${esc(r["標案網址"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
                 <td>${r["標案API"] ? `<a href="${esc(r["標案API"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
               </tr>
             `).join("")}
@@ -534,6 +549,7 @@ function dedupeRows(rows) {
       const maxRows = Math.max(
         1,
         Math.min(20, Number(document.getElementById("maxRows").value || 5))
+        const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
       );
 
       const queries = document.getElementById("queries").value
@@ -552,7 +568,7 @@ function dedupeRows(rows) {
 
       for (const q of queries) {
         try {
-          const rows = await buildRowsForQuery(q, maxRows);
+          const rows = await buildRowsForQuery(q, maxRows, dateRangeDays);
           allRows.push(...rows);
         } catch (e) {
           errs.push(`${q}：${e.message || e}`);
@@ -563,7 +579,7 @@ function dedupeRows(rows) {
 
       LAST_ROWS = dedupedRows;
       renderTable(dedupedRows);
-      status.textContent = `查詢完成：只保留最近 15 天公告；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
+      status.textContent = `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
 
       if (errs.length) {
         error.textContent = errs.join("\n");
