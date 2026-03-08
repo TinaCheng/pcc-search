@@ -324,31 +324,30 @@
     }
 
     function extractDetailObject(obj) {
-      if (!obj || typeof obj !== "object") return {};
+  if (!obj || typeof obj !== "object") return {};
 
-      if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
-        return obj.detail;
+  // 若本身就是 detail 物件
+  if (!Array.isArray(obj) && Object.keys(obj).some(k => k.includes(":"))) {
+    return obj;
+  }
+
+  // 若是單筆 record 且內含 detail
+  if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
+    return obj.detail;
+  }
+
+  // 若是 API 回傳，固定抓 records 最後一筆的 detail
+  if (Array.isArray(obj.records) && obj.records.length > 0) {
+    const lastRecord = obj.records[obj.records.length - 1];
+    if (lastRecord && typeof lastRecord === "object") {
+      if (lastRecord.detail && typeof lastRecord.detail === "object") {
+        return lastRecord.detail;
       }
-
-      if (Array.isArray(obj.records) && obj.records.length > 0) {
-        for (const item of obj.records) {
-          if (item && typeof item === "object") {
-            if (item.detail && typeof item.detail === "object") {
-              return item.detail;
-            }
-            if (Object.keys(item).some(k => k.includes(":"))) {
-              return item;
-            }
-          }
-        }
-      }
-
-      if (Object.keys(obj).some(k => k.includes(":"))) {
-        return obj;
-      }
-
-      return {};
     }
+  }
+
+  return {};
+}
 
     function pickDetailValue(detail, targetName) {
       if (!detail || typeof detail !== "object") return "";
@@ -497,7 +496,7 @@
     return isWithinLastNDays(rec.date, dateRangeDays);
   });
 
-  // 先以「同案」合併 search records，不是先轉 row
+  // 先依同案分組
   const groupedMap = new Map();
 
   for (const rec of filteredRecords) {
@@ -511,89 +510,39 @@
     ].join("||");
 
     if (!groupedMap.has(key)) {
-      groupedMap.set(key, {
-        rawQuery: cleanText(rawQuery),
-        records: [rec]
-      });
-    } else {
-      groupedMap.get(key).records.push(rec);
+      groupedMap.set(key, []);
     }
+    groupedMap.get(key).push(rec);
   }
 
-  const groupedEntries = Array.from(groupedMap.values()).slice(0, maxRows);
+  const groupedEntries = Array.from(groupedMap.entries()).slice(0, maxRows);
   const rows = [];
 
-  for (const group of groupedEntries) {
-    const recs = group.records;
+  for (const [, recs] of groupedEntries) {
+    // searchbytitle 同案資料：固定取最後一筆 record
+    const lastSearchRecord = recs[recs.length - 1];
+    const lastBrief = lastSearchRecord?.brief || {};
+    const searchDetail = extractDetailObject({ records: recs });
 
-    // 先合併 searchbytitle 各 record 的資料
-    let mergedRec = {};
-    let mergedBrief = {};
-    let mergedDetail = {};
-
-    for (const rec of recs) {
-      const brief = rec?.brief || {};
-      const detail = extractDetailObject(rec);
-
-      // rec 本身欄位，空白才補
-      for (const [k, v] of Object.entries(rec || {})) {
-        if (!isFilled(mergedRec[k]) && isFilled(v)) {
-          mergedRec[k] = v;
-        }
-      }
-
-      // brief 欄位，空白才補；較長文字優先
-      for (const [k, v] of Object.entries(brief)) {
-        if (!isFilled(mergedBrief[k]) && isFilled(v)) {
-          mergedBrief[k] = v;
-        } else if (cleanText(v).length > cleanText(mergedBrief[k]).length) {
-          mergedBrief[k] = v;
-        }
-      }
-
-      // detail 欄位，空白才補
-      for (const [k, v] of Object.entries(detail)) {
-        if (!isFilled(mergedDetail[k]) && isFilled(v)) {
-          mergedDetail[k] = v;
-        }
-      }
-
-      // 公告日保留最新
-      if (parseDateNumber(rec?.date) > parseDateNumber(mergedRec?.date)) {
-        mergedRec.date = rec.date;
-      }
-
-      // url / tender_api_url / unit_id / job_number 補值
-      for (const keyName of ["url", "tender_api_url", "unit_id", "job_number", "unit_name"]) {
-        if (!isFilled(mergedRec[keyName]) && isFilled(rec?.[keyName])) {
-          mergedRec[keyName] = rec[keyName];
-        }
-      }
-    }
-
-    // 再補 tender_api_url 回來的 detail
-    const tenderApiUrl = cleanText(mergedRec?.tender_api_url || "");
+    const tenderApiUrl = cleanText(lastSearchRecord?.tender_api_url || "");
     const tenderData = await fetchTenderDetail(tenderApiUrl);
+
+    // tender API 也固定抓最後一筆 detail
     const tenderDetail = extractDetailObject(tenderData);
 
-    const finalDetail = { ...mergedDetail };
-
-    for (const [k, v] of Object.entries(tenderDetail || {})) {
-      if (!isFilled(finalDetail[k]) && isFilled(v)) {
-        finalDetail[k] = v;
-      }
-    }
+    // tenderDetail 優先，searchDetail 補空欄
+    const finalDetail = { ...searchDetail, ...tenderDetail };
 
     const row = {
-      "原始輸入": cleanText(group.rawQuery),
-      "公告日": cleanText(mergedRec?.date || pickDetailValue(finalDetail, "公告日")),
+      "原始輸入": cleanText(rawQuery),
+      "公告日": cleanText(lastSearchRecord?.date || pickDetailValue(finalDetail, "公告日")),
       "原公告日": pickDetailValue(finalDetail, "原公告日"),
-      "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(mergedRec?.job_number),
-      "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(mergedBrief?.title),
-      "類型": cleanText(mergedBrief?.type || pickDetailValue(finalDetail, "type")),
-      "分類": cleanText(mergedBrief?.category || pickDetailValue(finalDetail, "標的分類")),
-      "機關代碼": pickDetailValue(finalDetail, "機關代碼") || cleanText(mergedRec?.unit_id),
-      "機關名稱": pickDetailValue(finalDetail, "機關名稱") || cleanText(mergedRec?.unit_name),
+      "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
+      "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
+      "類型": cleanText(lastBrief?.type || pickDetailValue(finalDetail, "type")),
+      "分類": cleanText(lastBrief?.category || pickDetailValue(finalDetail, "標的分類")),
+      "機關代碼": pickDetailValue(finalDetail, "機關代碼") || cleanText(lastSearchRecord?.unit_id),
+      "機關名稱": pickDetailValue(finalDetail, "機關名稱") || cleanText(lastSearchRecord?.unit_name),
       "單位名稱": pickDetailValue(finalDetail, "單位名稱"),
       "機關地址": pickDetailValue(finalDetail, "機關地址"),
       "聯絡人": pickDetailValue(finalDetail, "聯絡人"),
@@ -602,7 +551,7 @@
       "截止投標": pickDetailValue(finalDetail, "截止投標"),
       "開標時間": pickDetailValue(finalDetail, "開標時間"),
       "是否異動招標文件": pickDetailValue(finalDetail, "是否異動招標文件"),
-      "標案網址": buildOfficialUrl(mergedRec, finalDetail),
+      "標案網址": buildOfficialUrl(lastSearchRecord, finalDetail),
       "標案API": tenderApiUrl
     };
 
@@ -746,9 +695,10 @@
       }
 
       LAST_ROWS = allRows;
-      renderTable(allRows);
+renderTable(allRows);
 
-      status.textContent = `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+status.textContent =
+  `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
       
       if (errs.length) {
         errorBox.textContent = errs.join("\n");
