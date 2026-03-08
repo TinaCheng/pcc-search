@@ -355,6 +355,40 @@
       return rows;
     }
 
+    function toComparableDate(v) {
+  const s = String(v || "").replace(/\D/g, "");
+  return s ? Number(s) : 0;
+}
+
+function dedupeRows(rows) {
+  const bestMap = new Map();
+
+  for (const row of rows) {
+    const key = [
+      row["原始輸入"] || "",
+      row["機關代碼"] || "",
+      row["標案案號"] || "",
+      row["標案名稱"] || ""
+    ].join("||");
+
+    const currentDate = toComparableDate(row["公告日"]);
+    const existed = bestMap.get(key);
+
+    if (!existed) {
+      bestMap.set(key, row);
+      continue;
+    }
+
+    const existedDate = toComparableDate(existed["公告日"]);
+
+    if (currentDate > existedDate) {
+      bestMap.set(key, row);
+    }
+  }
+
+  return Array.from(bestMap.values());
+}
+    
     function renderTable(rows) {
       const tableWrap = document.getElementById("tableWrap");
       const tableCard = document.getElementById("tableCard");
@@ -489,9 +523,11 @@
         }
       }
 
-      LAST_ROWS = allRows;
-      renderTable(allRows);
-      status.textContent = `查詢完成：輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+      const dedupedRows = dedupeRows(allRows);
+
+      LAST_ROWS = dedupedRows;
+      renderTable(dedupedRows);
+      status.textContent = `查詢完成：輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${dedupedRows.length} 筆`;
 
       if (errs.length) {
         error.textContent = errs.join("\n");
