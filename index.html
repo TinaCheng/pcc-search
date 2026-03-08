@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>政府標案查詢工具</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: Arial, "Microsoft JhengHei", sans-serif;
@@ -18,7 +16,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1320px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -106,6 +104,11 @@
       color: #1f4fbf;
     }
 
+    button.export-btn {
+      background: #0f9d58;
+      color: #fff;
+    }
+
     .status {
       font-size: 14px;
       color: #333;
@@ -135,7 +138,7 @@
 
     table {
       width: 100%;
-      min-width: 1100px;
+      min-width: 2000px;
       border-collapse: collapse;
     }
 
@@ -178,57 +181,20 @@
     }
 
     @media (max-width: 768px) {
-      .container {
-        padding: 12px;
-      }
-
-      .card {
-        padding: 14px;
-        border-radius: 10px;
-      }
-
-      h1 {
-        font-size: 26px;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .btn-row {
-        flex-direction: column;
-      }
-
-      button {
-        width: 100%;
-      }
-
-      .mobile-hint {
-        display: block;
-      }
-
-      th, td {
-        font-size: 13px;
-        padding: 8px 10px;
-      }
+      .container { padding: 12px; }
+      .card { padding: 14px; border-radius: 10px; }
+      h1 { font-size: 26px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .btn-row { flex-direction: column; }
+      button { width: 100%; }
+      .mobile-hint { display: block; }
+      th, td { font-size: 13px; padding: 8px 10px; }
     }
 
     @media (max-width: 480px) {
-      h1 {
-        font-size: 22px;
-      }
-
-      .subtext,
-      .status,
-      .error {
-        font-size: 13px;
-      }
-
-      textarea,
-      .field input,
-      button {
-        font-size: 16px;
-      }
+      h1 { font-size: 22px; }
+      .subtext, .status, .error { font-size: 13px; }
+      textarea, .field input, button { font-size: 16px; }
     }
   </style>
 </head>
@@ -251,13 +217,14 @@
 
         <div class="field">
           <label for="maxRows">每筆顯示筆數</label>
-          <input id="maxRows" type="number" min="1" max="50" value="10">
+          <input id="maxRows" type="number" min="1" max="20" value="5">
         </div>
       </div>
 
       <div class="btn-row">
         <button onclick="searchTender()">查詢</button>
         <button class="secondary" onclick="clearAll()">清空</button>
+        <button class="export-btn" onclick="exportExcel()">匯出 Excel</button>
       </div>
 
       <div class="mobile-hint">
@@ -278,8 +245,10 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
-    const API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
+    const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
+    let LAST_ROWS = [];
 
     function esc(v) {
       if (v === null || v === undefined) return "";
@@ -290,31 +259,100 @@
         .replaceAll('"', "&quot;");
     }
 
-    async function fetchOne(query) {
-      const url = API_URL + "?query=" + encodeURIComponent(query) + "&page=1";
+    function cleanText(v) {
+      if (v === null || v === undefined) return "";
+      return String(v).replace(/\s+/g, " ").trim();
+    }
+
+    async function fetchJson(url) {
       const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(query + "：HTTP " + res.status);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}：${url}`);
       return await res.json();
     }
 
-    function toRows(rawQuery, data, maxRows) {
-      const records = Array.isArray(data.records) ? data.records : [];
-      return records.slice(0, maxRows).map(rec => {
+    async function searchOne(query) {
+      const url = SEARCH_API_URL + "?query=" + encodeURIComponent(query) + "&page=1";
+      return await fetchJson(url);
+    }
+
+    async function fetchTenderDetail(tenderApiUrl) {
+      if (!tenderApiUrl) return null;
+      try {
+        return await fetchJson(tenderApiUrl);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function pickDetailValue(detail, targetName) {
+      if (!detail || typeof detail !== "object") return "";
+
+      const keys = Object.keys(detail);
+
+      for (const key of keys) {
+        if (key === targetName) return cleanText(detail[key]);
+      }
+
+      for (const key of keys) {
+        const tail = key.split(":").pop().trim();
+        if (tail === targetName) return cleanText(detail[key]);
+      }
+
+      for (const key of keys) {
+        const tail = key.split(":").pop().trim();
+        if (tail.includes(targetName) || targetName.includes(tail)) {
+          return cleanText(detail[key]);
+        }
+      }
+
+      return "";
+    }
+
+    function toDateText(v) {
+      return cleanText(v);
+    }
+
+    async function buildRowsForQuery(rawQuery, maxRows) {
+      const searchData = await searchOne(rawQuery);
+      const records = Array.isArray(searchData.records) ? searchData.records.slice(0, maxRows) : [];
+
+      const rows = [];
+
+      for (const rec of records) {
         const brief = rec.brief || {};
-        return {
-          原始輸入: rawQuery,
-          公告日: rec.date || "",
-          標案案號: rec.job_number || "",
-          標案名稱: brief.title || "",
-          類型: brief.type || "",
-          分類: brief.category || "",
-          機關代碼: rec.unit_id || "",
-          機關名稱: rec.unit_name || "",
-          標案API: rec.tender_api_url || ""
+        const tenderApiUrl = rec.tender_api_url || "";
+        const tenderData = await fetchTenderDetail(tenderApiUrl);
+
+        let detail = {};
+        if (tenderData && Array.isArray(tenderData.records) && tenderData.records.length > 0) {
+          detail = tenderData.records[0].detail || {};
+        }
+
+        const row = {
+          "原始輸入": rawQuery,
+          "公告日": cleanText(rec.date || ""),
+          "原公告日": pickDetailValue(detail, "原公告日"),
+          "標案案號": pickDetailValue(detail, "標案案號") || cleanText(rec.job_number || ""),
+          "標案名稱": pickDetailValue(detail, "標案名稱") || cleanText(brief.title || ""),
+          "類型": cleanText(brief.type || ""),
+          "分類": cleanText(brief.category || ""),
+          "機關代碼": cleanText(rec.unit_id || ""),
+          "機關名稱": pickDetailValue(detail, "機關名稱") || cleanText(rec.unit_name || ""),
+          "單位名稱": pickDetailValue(detail, "單位名稱"),
+          "機關地址": pickDetailValue(detail, "機關地址"),
+          "聯絡人": pickDetailValue(detail, "聯絡人"),
+          "聯絡電話": pickDetailValue(detail, "聯絡電話"),
+          "決標方式": pickDetailValue(detail, "決標方式"),
+          "截止投標": toDateText(pickDetailValue(detail, "截止投標")),
+          "開標時間": toDateText(pickDetailValue(detail, "開標時間")),
+          "是否異動招標文件": pickDetailValue(detail, "是否異動招標文件"),
+          "標案API": cleanText(tenderApiUrl)
         };
-      });
+
+        rows.push(row);
+      }
+
+      return rows;
     }
 
     function renderTable(rows) {
@@ -331,29 +369,47 @@
         <table>
           <thead>
             <tr>
-              <th style="width:120px;">原始輸入</th>
-              <th style="width:100px;">公告日</th>
-              <th style="width:110px;">標案案號</th>
-              <th style="width:300px;">標案名稱</th>
-              <th style="width:200px;">類型</th>
-              <th style="width:180px;">分類</th>
-              <th style="width:120px;">機關代碼</th>
-              <th style="width:160px;">機關名稱</th>
-              <th style="width:140px;">標案 API</th>
+              <th>原始輸入</th>
+              <th>公告日</th>
+              <th>原公告日</th>
+              <th>標案案號</th>
+              <th>標案名稱</th>
+              <th>類型</th>
+              <th>分類</th>
+              <th>機關代碼</th>
+              <th>機關名稱</th>
+              <th>單位名稱</th>
+              <th>機關地址</th>
+              <th>聯絡人</th>
+              <th>聯絡電話</th>
+              <th>決標方式</th>
+              <th>截止投標</th>
+              <th>開標時間</th>
+              <th>是否異動招標文件</th>
+              <th>標案 API</th>
             </tr>
           </thead>
           <tbody>
             ${rows.map(r => `
               <tr>
-                <td>${esc(r.原始輸入)}</td>
-                <td>${esc(r.公告日)}</td>
-                <td>${esc(r.標案案號)}</td>
-                <td>${esc(r.標案名稱)}</td>
-                <td>${esc(r.類型)}</td>
-                <td>${esc(r.分類)}</td>
-                <td>${esc(r.機關代碼)}</td>
-                <td>${esc(r.機關名稱)}</td>
-                <td>${r.標案API ? `<a href="${esc(r.標案API)}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
+                <td>${esc(r["原始輸入"])}</td>
+                <td>${esc(r["公告日"])}</td>
+                <td>${esc(r["原公告日"])}</td>
+                <td>${esc(r["標案案號"])}</td>
+                <td>${esc(r["標案名稱"])}</td>
+                <td>${esc(r["類型"])}</td>
+                <td>${esc(r["分類"])}</td>
+                <td>${esc(r["機關代碼"])}</td>
+                <td>${esc(r["機關名稱"])}</td>
+                <td>${esc(r["單位名稱"])}</td>
+                <td>${esc(r["機關地址"])}</td>
+                <td>${esc(r["聯絡人"])}</td>
+                <td>${esc(r["聯絡電話"])}</td>
+                <td>${esc(r["決標方式"])}</td>
+                <td>${esc(r["截止投標"])}</td>
+                <td>${esc(r["開標時間"])}</td>
+                <td>${esc(r["是否異動招標文件"])}</td>
+                <td>${r["標案API"] ? `<a href="${esc(r["標案API"])}" target="_blank" rel="noopener noreferrer">開啟</a>` : ""}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -371,6 +427,25 @@
       document.getElementById("errorWrap").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
       document.getElementById("tableCard").style.display = "none";
+      LAST_ROWS = [];
+    }
+
+    function exportExcel() {
+      if (!LAST_ROWS.length) {
+        alert("目前沒有可匯出的資料");
+        return;
+      }
+
+      const exportRows = LAST_ROWS.map(row => {
+        const out = { ...row };
+        if (!out["原公告日"]) delete out["原公告日"];
+        return out;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "標案資料");
+      XLSX.writeFile(wb, "政府標案查詢結果.xlsx");
     }
 
     async function searchTender() {
@@ -384,10 +459,11 @@
       errorWrap.style.display = "none";
       tableWrap.innerHTML = "";
       tableCard.style.display = "none";
+      LAST_ROWS = [];
 
       const maxRows = Math.max(
         1,
-        Math.min(50, Number(document.getElementById("maxRows").value || 10))
+        Math.min(20, Number(document.getElementById("maxRows").value || 5))
       );
 
       const queries = document.getElementById("queries").value
@@ -400,20 +476,20 @@
         return;
       }
 
-      status.textContent = "查詢中...";
+      status.textContent = "查詢中，正在補抓詳細欄位...";
       const allRows = [];
       const errs = [];
 
       for (const q of queries) {
         try {
-          const data = await fetchOne(q);
-          const rows = toRows(q, data, maxRows);
+          const rows = await buildRowsForQuery(q, maxRows);
           allRows.push(...rows);
         } catch (e) {
-          errs.push(String(e.message || e));
+          errs.push(`${q}：${e.message || e}`);
         }
       }
 
+      LAST_ROWS = allRows;
       renderTable(allRows);
       status.textContent = `查詢完成：輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
 
