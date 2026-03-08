@@ -362,34 +362,74 @@
       return s ? Number(s) : 0;
     }
 
-    function dedupeRows(rows) {
-      const bestMap = new Map();
+    function toComparableDate(v) {
+  const s = String(v || "").replace(/\D/g, "");
+  return s ? Number(s) : 0;
+}
 
-      for (const row of rows) {
-        const key = [
-          row["原始輸入"] || "",
-          row["機關代碼"] || "",
-          row["標案案號"] || "",
-          row["標案名稱"] || ""
-        ].join("||");
+function calcRowCompleteness(row) {
+  const importantFields = [
+    "原公告日",
+    "單位名稱",
+    "機關地址",
+    "聯絡人",
+    "聯絡電話",
+    "決標方式",
+    "截止投標",
+    "開標時間",
+    "是否異動招標文件",
+    "標案網址",
+    "標案API"
+  ];
 
-        const currentDate = toComparableDate(row["公告日"]);
-        const existed = bestMap.get(key);
+  let score = 0;
 
-        if (!existed) {
-          bestMap.set(key, row);
-          continue;
-        }
-
-        const existedDate = toComparableDate(existed["公告日"]);
-
-        if (currentDate > existedDate) {
-          bestMap.set(key, row);
-        }
-      }
-
-      return Array.from(bestMap.values());
+  for (const field of importantFields) {
+    if (String(row[field] || "").trim()) {
+      score += 1;
     }
+  }
+
+  return score;
+}
+
+function dedupeRows(rows) {
+  const bestMap = new Map();
+
+  for (const row of rows) {
+    const key = [
+      row["原始輸入"] || "",
+      row["機關代碼"] || "",
+      row["標案案號"] || "",
+      row["標案名稱"] || ""
+    ].join("||");
+
+    const currentCompleteness = calcRowCompleteness(row);
+    const currentDate = toComparableDate(row["公告日"]);
+    const existed = bestMap.get(key);
+
+    if (!existed) {
+      bestMap.set(key, row);
+      continue;
+    }
+
+    const existedCompleteness = calcRowCompleteness(existed);
+    const existedDate = toComparableDate(existed["公告日"]);
+
+    // 先比完整度
+    if (currentCompleteness > existedCompleteness) {
+      bestMap.set(key, row);
+      continue;
+    }
+
+    // 完整度一樣時，再比日期
+    if (currentCompleteness === existedCompleteness && currentDate > existedDate) {
+      bestMap.set(key, row);
+    }
+  }
+
+  return Array.from(bestMap.values());
+}
 
     function buildCaseUrl(relativeUrl) {
       const path = cleanText(relativeUrl);
