@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>政府標案查詢工具</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 登入頁 -->
+  <div id="loginPage" class="login-shell">
+    <div class="login-card">
+      <h2>請輸入密碼</h2>
+      <p>此工具僅供授權人員使用。</p>
+      <label for="passwordInput">網站密碼</label>
+      <input id="passwordInput" type="password" placeholder="請輸入密碼" />
+      <button class="full-btn" onclick="checkPassword()">進入</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- 主頁 -->
+  <div id="appPage" style="display:none;">
+    <div class="container">
+      <div class="card">
+        <h1>政府標案查詢工具</h1>
+        <div class="subtext">
+          純前端版。依關鍵字查詢候選標案，再補抓詳細資料。匯出 Excel 時，只有打勾的列會被匯出。
+        </div>
+
+        <div class="grid">
+          <div>
+            <label for="queries">請輸入關鍵字（每行一筆）</label>
+            <textarea id="queries" placeholder="例如：
+屏東縣遙控無人機飛行場地坪延伸工程
+115年「韌性臺灣-強化各類型義消科技化訓練與精進裝備中程計畫」水下工作無人機1組
+115年度遙控水上救生無人機採購案"></textarea>
+          </div>
+
+          <div>
+            <label for="maxRows">每筆候選數</label>
+            <input id="maxRows" type="number" min="1" max="20" value="8" />
+          </div>
+
+          <div>
+            <label for="dateRange">公告日期區間</label>
+            <select id="dateRange">
+              <option value="7">今天往前 7 天</option>
+              <option value="15" selected>今天往前 15 天</option>
+              <option value="30">今天往前 30 天</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button onclick="searchTender()">查詢</button>
+          <button class="secondary" onclick="clearAll()">清空</button>
+          <button class="secondary" onclick="clearCacheOnly()">清除快取</button>
+          <button class="export" onclick="exportExcel()">匯出 Excel</button>
+          <button class="logout" onclick="logout()">登出</button>
+        </div>
+
+        <div class="mobile-hint">手機上表格可左右滑動查看完整欄位。</div>
+      </div>
+
+      <div class="card">
+        <div id="status" class="status">尚未查詢</div>
+      </div>
+
+      <div id="errorCard" class="card" style="display:none;">
+        <div id="errorBox" class="error"></div>
+      </div>
+
+      <div id="tableCard" class="card" style="display:none;">
+        <div class="toolbar">
+          <button class="secondary" onclick="selectAllRows()">全選</button>
+          <button class="secondary" onclick="clearAllSelections()">全部取消</button>
+        </div>
+        <div id="tableWrap" class="table-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/search.js"></script>
+</body>
+</html>
