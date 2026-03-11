@@ -42,6 +42,27 @@ function parseDateNumber(v) {
   return s ? Number(s) : 0;
 }
 
+function isDateWithinLastNDays(dateStr, days) {
+  const dateNum = parseDateNumber(dateStr);
+  if (!dateNum) return false;
+
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - Number(days));
+
+  const startNum =
+    start.getFullYear() * 10000 +
+    (start.getMonth() + 1) * 100 +
+    start.getDate();
+
+  const endNum =
+    today.getFullYear() * 10000 +
+    (today.getMonth() + 1) * 100 +
+    today.getDate();
+
+  return dateNum >= startNum && dateNum <= endNum;
+}
+
 // 將 YYYYMMDD 轉成 Date
 function parseApiDate(v) {
   const s = String(v || "").replace(/\D/g, "");
