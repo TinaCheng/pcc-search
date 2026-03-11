@@ -251,3 +251,4 @@ function clearCacheOnly() {
   初始化
 */
 initAuth();
+startAuthWatcher();
