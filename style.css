@@ -165,6 +165,12 @@ th, td {
   font-size: 14px;
 }
 
+.col-seq {
+  white-space: nowrap;
+  width: 1%;
+  text-align: center;
+}
+
 .col-date {
     white-space: nowrap;
     width: 1%;
