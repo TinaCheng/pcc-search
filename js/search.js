@@ -121,16 +121,79 @@ async function searchTender() {
     }
   }
 
-  LAST_ROWS = allRows;
-  renderTable(allRows);
+  const dedupedRows = dedupeRowsAcrossQueries(allRows);
 
-  status.textContent =
-    `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，結果 ${allRows.length} 筆`;
+// 補項次
+const finalRows = dedupedRows.map((row, index) => ({
+  ...row,
+  "項次": index + 1
+}));
+
+LAST_ROWS = finalRows;
+renderTable(finalRows);
+
+status.textContent =
+  `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${finalRows.length} 筆`;
 
   if (errs.length) {
     errorBox.textContent = errs.join("\n");
     errorCard.style.display = "block";
   }
+}
+
+/*
+  跨關鍵字去重：
+  同一個標案若被不同關鍵字都查到，只保留一筆。
+  判斷依據：
+  - 機關代碼
+  - 標案案號
+  - 正規化後的標案名稱
+*/
+function dedupeRowsAcrossQueries(rows) {
+  const map = new Map();
+
+  for (const row of rows) {
+    const key = [
+      cleanText(row["機關代碼"]),
+      cleanText(row["標案案號"]),
+      normalizeTitle(row["標案名稱"])
+    ].join("||");
+
+    if (!map.has(key)) {
+      map.set(key, { ...row });
+      continue;
+    }
+
+    const existed = map.get(key);
+
+    // 合併原始輸入，讓你知道這筆是被哪些關鍵字查到
+    const oldInput = cleanText(existed["原始輸入"]);
+    const newInput = cleanText(row["原始輸入"]);
+
+    const inputSet = new Set(
+      [...oldInput.split("｜"), ...newInput.split("｜")]
+        .map(v => cleanText(v))
+        .filter(Boolean)
+    );
+
+    existed["原始輸入"] = Array.from(inputSet).join("｜");
+
+    // 公告日較新的保留
+    if (parseDateNumber(row["公告日"]) > parseDateNumber(existed["公告日"])) {
+      existed["公告日"] = row["公告日"];
+    }
+
+    // 空欄補值
+    for (const keyName of Object.keys(row)) {
+      if (!isFilled(existed[keyName]) && isFilled(row[keyName])) {
+        existed[keyName] = row[keyName];
+      }
+    }
+
+    map.set(key, existed);
+  }
+
+  return Array.from(map.values());
 }
 
 // 清空
