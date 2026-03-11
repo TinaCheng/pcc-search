@@ -15,8 +15,8 @@ function renderTable(rows) {
         <tr>
           <th class="checkbox-cell">勾選</th>
           <th>原始輸入</th>
-          <th>公告日</th>
-          <th>原公告日</th>
+          <th class="col-date">公告日</th>
+          <th class="col-date">原公告日</th>
           <th>標案案號</th>
           <th>標案名稱</th>
           <th>類型</th>
@@ -42,8 +42,8 @@ function renderTable(rows) {
               <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
             </td>
             <td>${esc(r["原始輸入"])}</td>
-            <td>${esc(r["公告日"])}</td>
-            <td>${esc(r["原公告日"])}</td>
+            <td class="col-date">${esc(r["公告日"])}</td>
+            <td class="col-date">${esc(r["原公告日"])}</td>
             <td>${esc(r["標案案號"])}</td>
             <td>${esc(r["標案名稱"])}</td>
             <td>${esc(r["類型"])}</td>
