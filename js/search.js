@@ -52,7 +52,7 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
     return {
       _selected: true,
       "原始輸入": cleanText(rawQuery),
-      "公告日": cleanText(lastSearchRecord?.date || pickDetailValue(finalDetail, "公告日")),
+      "公告日": pickDetailValue(finalDetail, "公告日"),
       "原公告日": pickDetailValue(finalDetail, "原公告日"),
       "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
       "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
