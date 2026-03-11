@@ -7,6 +7,8 @@ const SITE_PASSWORD = "123456";
 // sessionStorage key
 const AUTH_STORAGE_KEY = "pcc_tool_auth";
 
+const AUTH_EXPIRE_HOURS = 7;
+
 // tender detail 快取 key 前綴
 const TENDER_CACHE_PREFIX = "tender_cache::";
 
