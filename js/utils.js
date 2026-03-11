@@ -36,10 +36,30 @@ function normalizeTitle(v) {
     .toLowerCase();
 }
 
-// 只保留數字方便比較日期大小
-function parseDateNumber(v) {
-  const s = String(v || "").replace(/\D/g, "");
-  return s ? Number(s) : 0;
+function parseDateNumber(dateStr) {
+  if (!dateStr) return 0;
+
+  const raw = String(dateStr).trim();
+
+  // 20260306
+  if (/^\d{8}$/.test(raw)) {
+    return parseInt(raw, 10);
+  }
+
+  // 115/03/06 或 2026/03/06
+  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})/);
+  if (!m) return 0;
+
+  let year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const day = parseInt(m[3], 10);
+
+  // 民國年轉西元
+  if (year < 1911) {
+    year += 1911;
+  }
+
+  return year * 10000 + month * 100 + day;
 }
 
 function isDateWithinLastNDays(dateStr, days) {
