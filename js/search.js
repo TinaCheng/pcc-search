@@ -115,8 +115,8 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
       "原始輸入": cleanText(rawQuery),
 
       // 公告日優先抓 detail 正式欄位；沒有再退回 rec.date
-      "公告日": pickDetailValue(finalDetail, "公告日") || cleanText(lastSearchRecord?.date),
-      "原公告日": pickDetailValue(finalDetail, "原公告日"),
+      "公告日": formatTenderDate(pickDetailValue(finalDetail, "公告日") || cleanText(lastSearchRecord?.date)),
+      "原公告日": formatTenderDate(pickDetailValue(finalDetail, "原公告日")),
 
       "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
       "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
@@ -198,14 +198,18 @@ async function searchTender() {
     }
   }
 
-  // 跨關鍵字去重
   const dedupedRows = dedupeRowsAcrossQueries(allRows);
 
-  // 補項次
-  const finalRows = dedupedRows.map((row, index) => ({
-    ...row,
-    "項次": index + 1
-  }));
+// 再做一次最終日期過濾，避免任何舊資料漏進來
+const filteredFinalRows = dedupedRows.filter(row => {
+  return isDateWithinLastNDays(row["公告日"], dateRangeDays);
+});
+
+// 補項次
+const finalRows = filteredFinalRows.map((row, index) => ({
+  ...row,
+  "項次": index + 1
+}));
 
   LAST_ROWS = finalRows;
   renderTable(finalRows);
