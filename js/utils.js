@@ -36,18 +36,25 @@ function normalizeTitle(v) {
     .toLowerCase();
 }
 
+/*
+  將日期字串轉成可比較的 YYYYMMDD 數字
+  支援：
+  - 20260306
+  - 115/03/06
+  - 2026/03/06
+*/
 function parseDateNumber(dateStr) {
   if (!dateStr) return 0;
 
   const raw = String(dateStr).trim();
 
-  // 20260306
+  // 純 8 碼西元格式
   if (/^\d{8}$/.test(raw)) {
     return parseInt(raw, 10);
   }
 
-  // 115/03/06 或 2026/03/06
-  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})/);
+  // 斜線格式：115/03/06 或 2026/03/06
+  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/);
   if (!m) return 0;
 
   let year = parseInt(m[1], 10);
@@ -62,6 +69,45 @@ function parseDateNumber(dateStr) {
   return year * 10000 + month * 100 + day;
 }
 
+/*
+  將日期格式統一顯示成 民國 YYYY/MM/DD
+  例如：
+  - 20260306 -> 115/03/06
+  - 2026/03/06 -> 115/03/06
+  - 115/03/06 -> 115/03/06
+*/
+function formatTenderDate(dateStr) {
+  if (!dateStr) return "";
+
+  const raw = String(dateStr).trim();
+
+  // 20260306
+  if (/^\d{8}$/.test(raw)) {
+    const year = parseInt(raw.slice(0, 4), 10);
+    const month = raw.slice(4, 6);
+    const day = raw.slice(6, 8);
+    const rocYear = year - 1911;
+    return `${rocYear}/${month}/${day}`;
+  }
+
+  // 2026/03/06 或 115/03/06
+  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return raw;
+
+  let year = parseInt(m[1], 10);
+  const month = String(parseInt(m[2], 10)).padStart(2, "0");
+  const day = String(parseInt(m[3], 10)).padStart(2, "0");
+
+  if (year >= 1911) {
+    year = year - 1911;
+  }
+
+  return `${year}/${month}/${day}`;
+}
+
+/*
+  判斷日期是否在今天往前 N 天內
+*/
 function isDateWithinLastNDays(dateStr, days) {
   const dateNum = parseDateNumber(dateStr);
   if (!dateNum) return false;
