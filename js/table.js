@@ -14,6 +14,7 @@ function renderTable(rows) {
       <thead>
         <tr>
           <th class="checkbox-cell">勾選</th>
+          <th class="col-seq">項次</th>
           <th>原始輸入</th>
           <th class="col-date">公告日</th>
           <th class="col-date">原公告日</th>
@@ -39,8 +40,9 @@ function renderTable(rows) {
         ${rows.map((r, index) => `
           <tr>
             <td class="checkbox-cell">
-              <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
+            <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
             </td>
+            <td class="col-seq">${esc(r["項次"])}</td>
             <td>${esc(r["原始輸入"])}</td>
             <td class="col-date">${esc(r["公告日"])}</td>
             <td class="col-date">${esc(r["原公告日"])}</td>
