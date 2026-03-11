@@ -262,7 +262,7 @@
 
         <div>
           <label for="maxRows">每筆候選數</label>
-          <input id="maxRows" type="number" min="1" max="20" value="8" />
+          <input id="maxRows" type="number" min="1" max="20" value="4" />
         </div>
 
         <div>
@@ -569,79 +569,127 @@
       6. 組成畫面列資料
     */
     async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
-      const searchData = await searchOne(rawQuery);
-      const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-      const filteredRecords = allRecords.filter(rec => {
-        return isWithinLastNDays(rec.date, dateRangeDays);
-      });
+  const searchData = await searchOne(rawQuery);
+  const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-      // 同案分組
-      const groupedMap = new Map();
+  const filteredRecords = allRecords.filter(rec => {
+    return isWithinLastNDays(rec.date, dateRangeDays);
+  });
 
-      for (const rec of filteredRecords) {
-        const brief = rec?.brief || {};
-        const title = cleanText(brief?.title || "");
+  const groupedMap = new Map();
 
-        const key = [
-          cleanText(rawQuery),
-          cleanText(rec?.unit_id || ""),
-          cleanText(rec?.job_number || ""),
-          normalizeTitle(title)
-        ].join("||");
+  for (const rec of filteredRecords) {
 
-        if (!groupedMap.has(key)) {
-          groupedMap.set(key, []);
-        }
+    const brief = rec?.brief || {};
+    const title = cleanText(brief?.title || "");
 
-        groupedMap.get(key).push(rec);
-      }
+    const key = [
+      cleanText(rawQuery),
+      cleanText(rec?.unit_id || ""),
+      cleanText(rec?.job_number || ""),
+      normalizeTitle(title)
+    ].join("||");
 
-      const groupedEntries = Array.from(groupedMap.entries()).slice(0, maxRows);
-      const rows = [];
-
-      for (const [, recs] of groupedEntries) {
-        // 同案固定取最後一筆 record
-        const lastSearchRecord = recs[recs.length - 1];
-        const lastBrief = lastSearchRecord?.brief || {};
-
-        // searchbytitle 同案 records 的 detail：抓最後一筆
-        const searchDetail = extractDetailObject({ records: recs });
-
-        // tender_api_url 的 detail：也抓最後一筆
-        const tenderApiUrl = cleanText(lastSearchRecord?.tender_api_url || "");
-        const tenderData = await fetchTenderDetail(tenderApiUrl);
-        const tenderDetail = extractDetailObject(tenderData);
-
-        // tenderDetail 優先，searchDetail 補空缺
-        const finalDetail = { ...searchDetail, ...tenderDetail };
-
-        rows.push({
-          _selected: true,
-          "原始輸入": cleanText(rawQuery),
-          "公告日": cleanText(lastSearchRecord?.date || pickDetailValue(finalDetail, "公告日")),
-          "原公告日": pickDetailValue(finalDetail, "原公告日"),
-          "標案案號": pickDetailValue(finalDetail, "標案案號") || cleanText(lastSearchRecord?.job_number),
-          "標案名稱": pickDetailValue(finalDetail, "標案名稱") || cleanText(lastBrief?.title),
-          "類型": cleanText(lastBrief?.type || pickDetailValue(finalDetail, "type")),
-          "分類": cleanText(lastBrief?.category || pickDetailValue(finalDetail, "標的分類")),
-          "機關代碼": pickDetailValue(finalDetail, "機關代碼") || cleanText(lastSearchRecord?.unit_id),
-          "機關名稱": pickDetailValue(finalDetail, "機關名稱") || cleanText(lastSearchRecord?.unit_name),
-          "單位名稱": pickDetailValue(finalDetail, "單位名稱"),
-          "機關地址": pickDetailValue(finalDetail, "機關地址"),
-          "聯絡人": pickDetailValue(finalDetail, "聯絡人"),
-          "聯絡電話": pickDetailValue(finalDetail, "聯絡電話"),
-          "決標方式": pickDetailValue(finalDetail, "決標方式"),
-          "截止投標": pickDetailValue(finalDetail, "截止投標"),
-          "開標時間": pickDetailValue(finalDetail, "開標時間"),
-          "是否異動招標文件": pickDetailValue(finalDetail, "是否異動招標文件"),
-          "標案網址": buildOfficialUrl(lastSearchRecord, finalDetail),
-          "標案API": tenderApiUrl
-        });
-      }
-
-      return rows;
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, []);
     }
+
+    groupedMap.get(key).push(rec);
+
+  }
+
+  const groupedEntries = Array.from(groupedMap.entries()).slice(0, maxRows);
+
+  // ====== 這裡開始並行 ======
+
+  const tasks = groupedEntries.map(async ([, recs]) => {
+
+    const lastSearchRecord = recs[recs.length - 1];
+    const lastBrief = lastSearchRecord?.brief || {};
+
+    const searchDetail = extractDetailObject({ records: recs });
+
+    const tenderApiUrl = cleanText(lastSearchRecord?.tender_api_url || "");
+
+    const tenderData = await fetchTenderDetail(tenderApiUrl);
+    const tenderDetail = extractDetailObject(tenderData);
+
+    const finalDetail = { ...searchDetail, ...tenderDetail };
+
+    return {
+
+      _selected: true,
+
+      "原始輸入": cleanText(rawQuery),
+
+      "公告日":
+        cleanText(lastSearchRecord?.date) ||
+        pickDetailValue(finalDetail, "公告日"),
+
+      "原公告日": pickDetailValue(finalDetail, "原公告日"),
+
+      "標案案號":
+        pickDetailValue(finalDetail, "標案案號") ||
+        cleanText(lastSearchRecord?.job_number),
+
+      "標案名稱":
+        pickDetailValue(finalDetail, "標案名稱") ||
+        cleanText(lastBrief?.title),
+
+      "類型":
+        cleanText(lastBrief?.type) ||
+        pickDetailValue(finalDetail, "type"),
+
+      "分類":
+        cleanText(lastBrief?.category) ||
+        pickDetailValue(finalDetail, "標的分類"),
+
+      "機關代碼":
+        pickDetailValue(finalDetail, "機關代碼") ||
+        cleanText(lastSearchRecord?.unit_id),
+
+      "機關名稱":
+        pickDetailValue(finalDetail, "機關名稱") ||
+        cleanText(lastSearchRecord?.unit_name),
+
+      "單位名稱":
+        pickDetailValue(finalDetail, "單位名稱"),
+
+      "機關地址":
+        pickDetailValue(finalDetail, "機關地址"),
+
+      "聯絡人":
+        pickDetailValue(finalDetail, "聯絡人"),
+
+      "聯絡電話":
+        pickDetailValue(finalDetail, "聯絡電話"),
+
+      "決標方式":
+        pickDetailValue(finalDetail, "決標方式"),
+
+      "截止投標":
+        pickDetailValue(finalDetail, "截止投標"),
+
+      "開標時間":
+        pickDetailValue(finalDetail, "開標時間"),
+
+      "是否異動招標文件":
+        pickDetailValue(finalDetail, "是否異動招標文件"),
+
+      "標案網址":
+        buildOfficialUrl(lastSearchRecord, finalDetail),
+
+      "標案API":
+        tenderApiUrl
+    };
+
+  });
+
+  const rows = await Promise.all(tasks);
+
+  return rows;
+}
 
     /*
       renderTable
@@ -823,7 +871,7 @@
 
       const maxRows = Math.max(
         1,
-        Math.min(20, Number(document.getElementById("maxRows").value || 8))
+        Math.min(20, Number(document.getElementById("maxRows").value || 4))
       );
 
       const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
