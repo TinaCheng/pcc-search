@@ -10,9 +10,7 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   const searchData = await searchOne(rawQuery);
   const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
 
-  const filteredRecords = allRecords.filter(rec => {
-    return isWithinLastNDays(rec.date, dateRangeDays);
-  });
+  const filteredRecords = allRecords;
 
   const groupedMap = new Map();
 
@@ -73,7 +71,13 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
     };
   });
 
-  return await Promise.all(tasks);
+  const rows = await Promise.all(tasks);
+
+const finalRows = rows.filter(row => {
+  return isDateWithinLastNDays(row["公告日"], dateRangeDays);
+});
+
+return finalRows;
 }
 
 // 主查詢流程
