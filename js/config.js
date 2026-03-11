@@ -2,7 +2,7 @@
 const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
 
 // 前端密碼
-const SITE_PASSWORD = "123456";
+const SITE_PASSWORD = "Psd50968602";
 
 // sessionStorage key
 const AUTH_STORAGE_KEY = "pcc_tool_auth";
