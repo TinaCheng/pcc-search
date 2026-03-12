@@ -106,15 +106,22 @@ function formatTenderDate(dateStr) {
 }
 
 /*
-  判斷日期是否在今天往前 N 天內
+  判斷日期是否在「今天往前 N 天（包含今天）」區間內
+
+  例如：
+  N = 7
+  今天 = 3/11
+
+  區間 = 3/05 ~ 3/11
 */
 function isDateWithinLastNDays(dateStr, days) {
   const dateNum = parseDateNumber(dateStr);
   if (!dateNum) return false;
 
   const today = new Date();
+
   const start = new Date(today);
-  start.setDate(today.getDate() - Number(days));
+  start.setDate(today.getDate() - (Number(days) - 1));
 
   const startNum =
     start.getFullYear() * 10000 +
