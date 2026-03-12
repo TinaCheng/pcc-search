@@ -1,10 +1,14 @@
-// 將值轉成乾淨字串
+/*
+  將值轉成乾淨字串
+*/
 function cleanText(v) {
   if (v === null || v === undefined) return "";
   return String(v).replace(/\s+/g, " ").trim();
 }
 
-// 避免 HTML 顯示亂掉
+/*
+  HTML escape，避免表格顯示異常
+*/
 function esc(v) {
   return cleanText(v)
     .replaceAll("&", "&amp;")
@@ -13,17 +17,27 @@ function esc(v) {
     .replaceAll('"', "&quot;");
 }
 
-// 判斷是否有值
+/*
+  判斷欄位是否有值
+*/
 function isFilled(v) {
   return cleanText(v) !== "";
 }
 
-// 正規化 detail key
+/*
+  正規化欄位 key
+*/
 function normalizeKey(v) {
-  return cleanText(v).replaceAll("：", ":").toLowerCase();
+  return cleanText(v)
+    .replaceAll("：", ":")
+    .replace(/\s+/g, "")
+    .toLowerCase();
 }
 
-// 正規化標題，方便做同案識別
+/*
+  正規化標案名稱
+  用來做跨關鍵字去重
+*/
 function normalizeTitle(v) {
   return cleanText(v)
     .replaceAll("「", "")
@@ -37,24 +51,60 @@ function normalizeTitle(v) {
 }
 
 /*
+  取得台灣今天日期（避免時區誤差）
+*/
+function getTaiwanTodayParts() {
+  const now = new Date();
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+
+  const parts = formatter.formatToParts(now);
+  const map = {};
+
+  for (const p of parts) {
+    if (p.type !== "literal") {
+      map[p.type] = p.value;
+    }
+  }
+
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day)
+  };
+}
+
+/*
   將日期字串轉成可比較的 YYYYMMDD 數字
   支援：
-  - 20260306
-  - 115/03/06
-  - 2026/03/06
+  1. 20260306
+  2. 115/03/06
+  3. 2026/03/06
+  4. 115/03/06 09:30
+  5. 2026/03/06 09:30
 */
 function parseDateNumber(dateStr) {
   if (!dateStr) return 0;
 
   const raw = String(dateStr).trim();
 
-  // 純 8 碼西元格式
+  // 20260306
   if (/^\d{8}$/.test(raw)) {
     return parseInt(raw, 10);
   }
 
-  // 斜線格式：115/03/06 或 2026/03/06
-  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/);
+  // 20260306 09:30
+  if (/^\d{8}\s+\d{1,2}:\d{1,2}/.test(raw)) {
+    return parseInt(raw.slice(0, 8), 10);
+  }
+
+  // 115/03/06 或 2026/03/06，可帶時間
+  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})/);
   if (!m) return 0;
 
   let year = parseInt(m[1], 10);
@@ -70,11 +120,11 @@ function parseDateNumber(dateStr) {
 }
 
 /*
-  將日期格式統一顯示成 民國 YYYY/MM/DD
-  例如：
+  將日期統一顯示成民國格式：
   - 20260306 -> 115/03/06
   - 2026/03/06 -> 115/03/06
   - 115/03/06 -> 115/03/06
+  - 115/03/06 09:30 -> 115/03/06
 */
 function formatTenderDate(dateStr) {
   if (!dateStr) return "";
@@ -90,8 +140,14 @@ function formatTenderDate(dateStr) {
     return `${rocYear}/${month}/${day}`;
   }
 
-  // 2026/03/06 或 115/03/06
-  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/);
+  // 20260306 09:30
+  if (/^\d{8}\s+\d{1,2}:\d{1,2}/.test(raw)) {
+    const ymd = raw.slice(0, 8);
+    return formatTenderDate(ymd);
+  }
+
+  // 115/03/06 或 2026/03/06，可帶時間
+  const m = raw.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})/);
   if (!m) return raw;
 
   let year = parseInt(m[1], 10);
@@ -99,32 +155,17 @@ function formatTenderDate(dateStr) {
   const day = String(parseInt(m[3], 10)).padStart(2, "0");
 
   if (year >= 1911) {
-    year = year - 1911;
+    year -= 1911;
   }
 
   return `${year}/${month}/${day}`;
 }
 
 /*
-  取得台灣今天日期（避免時區誤差）
-*/
-function getTaiwanTodayParts() {
-  const now = new Date();
-
-  const tw = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Taipei",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now); // 例如 2026-03-12
-
-  const [year, month, day] = tw.split("-").map(Number);
-  return { year, month, day };
-}
-
-/*
   判斷日期是否在「今天往前 N 天（包含今天）」區間內
-  一律用台灣時區計算
+  例如：
+  N=7
+  若今天 3/12，則區間為 3/06 ~ 3/12
 */
 function isDateWithinLastNDays(dateStr, days) {
   const dateNum = parseDateNumber(dateStr);
@@ -149,54 +190,39 @@ function isDateWithinLastNDays(dateStr, days) {
   return dateNum >= startNum && dateNum <= endNum;
 }
 
-// 將 YYYYMMDD 轉成 Date
-function parseApiDate(v) {
-  const s = String(v || "").replace(/\D/g, "");
-  if (s.length !== 8) return null;
-
-  const y = Number(s.slice(0, 4));
-  const m = Number(s.slice(4, 6));
-  const d = Number(s.slice(6, 8));
-
-  const dt = new Date(y, m - 1, d);
-  return isNaN(dt.getTime()) ? null : dt;
-}
-
-// 日期歸零
-function startOfDay(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-// 判斷是否在今天往前 N 天內
-function isWithinLastNDays(dateValue, days) {
-  const target = parseApiDate(dateValue);
-  if (!target) return false;
-
-  const today = startOfDay(new Date());
-  const start = new Date(today);
-  start.setDate(start.getDate() - Number(days));
-
-  const t = startOfDay(target);
-  return t >= start && t <= today;
-}
-
 /*
-  固定抓 records 最後一筆的 detail
+  固定抓 detail 物件
+  支援：
+  1. obj.detail
+  2. obj.records 最後一筆 detail
+  3. 直接就是 detail object
 */
 function extractDetailObject(obj) {
   if (!obj || typeof obj !== "object") return {};
 
-  if (!Array.isArray(obj) && Object.keys(obj).some(k => k.includes(":"))) {
+  // 直接就是 detail 物件
+  const keys = Object.keys(obj);
+  if (
+    keys.length > 0 &&
+    keys.some(k => k.includes(":") || k === "url" || k === "type")
+  ) {
     return obj;
   }
 
+  // 單層 detail
   if (obj.detail && typeof obj.detail === "object" && !Array.isArray(obj.detail)) {
     return obj.detail;
   }
 
+  // records 最後一筆 detail
   if (Array.isArray(obj.records) && obj.records.length > 0) {
     const lastRecord = obj.records[obj.records.length - 1];
-    if (lastRecord && typeof lastRecord === "object" && lastRecord.detail && typeof lastRecord.detail === "object") {
+    if (
+      lastRecord &&
+      typeof lastRecord === "object" &&
+      lastRecord.detail &&
+      typeof lastRecord.detail === "object"
+    ) {
       return lastRecord.detail;
     }
   }
@@ -205,7 +231,12 @@ function extractDetailObject(obj) {
 }
 
 /*
-  從 detail 裡抓欄位
+  從 detail 中抓欄位值
+  比對順序：
+  1. 完整 key 相等
+  2. 尾段 key 相等
+  3. 尾段包含
+  4. 整體 key 包含
 */
 function pickDetailValue(detail, targetName) {
   if (!detail || typeof detail !== "object") return "";
@@ -213,51 +244,62 @@ function pickDetailValue(detail, targetName) {
   const target = normalizeKey(targetName);
   const entries = Object.entries(detail);
 
+  // 1. 完整 key 相等
   for (const [k, v] of entries) {
-    if (normalizeKey(k) === target) return cleanText(v);
+    if (normalizeKey(k) === target) {
+      return cleanText(v);
+    }
   }
 
+  // 2. key 尾段相等
   for (const [k, v] of entries) {
     const tail = normalizeKey(k).split(":").pop().trim();
-    if (tail === target) return cleanText(v);
+    if (tail === target) {
+      return cleanText(v);
+    }
   }
 
+  // 3. key 尾段包含
   for (const [k, v] of entries) {
     const tail = normalizeKey(k).split(":").pop().trim();
-    if (tail.includes(target) || target.includes(tail)) return cleanText(v);
+    if (tail.includes(target) || target.includes(tail)) {
+      return cleanText(v);
+    }
   }
 
+  // 4. 整體 key 包含
   for (const [k, v] of entries) {
     const nk = normalizeKey(k);
-    if (nk.includes(target) || target.includes(nk)) return cleanText(v);
+    if (nk.includes(target) || target.includes(nk)) {
+      return cleanText(v);
+    }
   }
 
   return "";
 }
 
 /*
-  組裝標案網址
+  組裝官方標案網址
+  優先順序：
+  1. detail.url
+  2. record.url
 */
-function buildOfficialUrl(rec, detail) {
+function buildOfficialUrl(record, detail) {
   const detailUrl = cleanText(pickDetailValue(detail, "url"));
   if (detailUrl.startsWith("http://") || detailUrl.startsWith("https://")) {
     return detailUrl;
   }
 
-  const raw = cleanText(rec?.url || "");
+  const raw = cleanText(record?.url || "");
+  if (!raw) return "";
+
   if (raw.startsWith("http://") || raw.startsWith("https://")) {
     return raw;
   }
 
-  if (raw) {
-    if (raw.startsWith("/")) {
-      if (raw.includes("searchTenderDetail") || raw.includes("searchtenderdetail")) {
-        return `https://web.pcc.gov.tw${raw}`;
-      }
-      return `https://pcc-api.openfun.app${raw}`;
-    }
-    return raw;
+  if (raw.startsWith("/")) {
+    return `https://pcc-api.openfun.app${raw}`;
   }
 
-  return "";
+  return raw;
 }
