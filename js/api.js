@@ -91,34 +91,9 @@ function clearTenderCache() {
 }
 
 /*
-  查詢單案 detail
-  改走 Cloudflare Worker proxy
+  目前不再主動抓 tender detail
+  直接使用 /search 回來的 records.detail
 */
 async function fetchTenderDetail(detailUrl) {
-  if (!isFilled(detailUrl)) return null;
-
-  // 記憶體快取
-  if (tenderMemoryCache.has(detailUrl)) {
-    return tenderMemoryCache.get(detailUrl);
-  }
-
-  // sessionStorage 快取
-  const sessionCached = getTenderFromSessionCache(detailUrl);
-  if (sessionCached) {
-    tenderMemoryCache.set(detailUrl, sessionCached);
-    return sessionCached;
-  }
-
-  // 走 proxy
-  try {
-    const proxyUrl = `${TENDER_DETAIL_API_URL}?url=${encodeURIComponent(detailUrl)}`;
-    const data = await fetchJson(proxyUrl);
-
-    tenderMemoryCache.set(detailUrl, data);
-    setTenderToSessionCache(detailUrl, data);
-
-    return data;
-  } catch (e) {
-    return null;
-  }
+  return null;
 }
