@@ -1,5 +1,6 @@
 // API 入口
-const SEARCH_API_URL = "https://pcc-api.openfun.app/api/searchbytitle";
+const SEARCH_API_URL = "https://pcc-live-proxy.tina58991314.workers.dev/search";
+const TENDER_DETAIL_API_URL = "https://pcc-live-proxy.tina58991314.workers.dev/tender";
 
 // 前端密碼
 const SITE_PASSWORD = "Psd50968602";
@@ -18,3 +19,4 @@ const TENDER_CACHE_TTL = 10 * 60 * 1000;
 
 // 全域結果資料
 let LAST_ROWS = [];
+
