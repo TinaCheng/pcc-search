@@ -106,20 +106,33 @@ function formatTenderDate(dateStr) {
 }
 
 /*
+  取得台灣今天日期（避免時區誤差）
+*/
+function getTaiwanTodayParts() {
+  const now = new Date();
+
+  const tw = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now); // 例如 2026-03-12
+
+  const [year, month, day] = tw.split("-").map(Number);
+  return { year, month, day };
+}
+
+/*
   判斷日期是否在「今天往前 N 天（包含今天）」區間內
-
-  例如：
-  N = 7
-  今天 = 3/11
-
-  區間 = 3/05 ~ 3/11
+  一律用台灣時區計算
 */
 function isDateWithinLastNDays(dateStr, days) {
   const dateNum = parseDateNumber(dateStr);
   if (!dateNum) return false;
 
-  const today = new Date();
+  const { year, month, day } = getTaiwanTodayParts();
 
+  const today = new Date(year, month - 1, day);
   const start = new Date(today);
   start.setDate(today.getDate() - (Number(days) - 1));
 
