@@ -217,6 +217,11 @@ const finalRows = filteredFinalRows.map((row, index) => ({
   status.textContent =
     `查詢完成：公告日期區間為今天往前 ${dateRangeDays} 天；輸入 ${queries.length} 筆，原始 ${allRows.length} 筆，去重後 ${finalRows.length} 筆`;
 
+  const twToday = getTaiwanTodayParts();
+console.log("台灣今天 =", `${twToday.year}-${twToday.month}-${twToday.day}`);
+console.log("查詢區間天數 =", dateRangeDays);
+console.log("最終結果公告日 =", finalRows.map(r => r["公告日"]));
+  
   if (errs.length) {
     errorBox.textContent = errs.join("\n");
     errorCard.style.display = "block";
