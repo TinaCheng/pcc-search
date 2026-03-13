@@ -110,7 +110,13 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   const { startDate, endDate } = buildOfficialDateRange(dateRangeDays);
 
   const searchData = await searchOne(rawQuery, startDate, endDate);
-  const records = Array.isArray(searchData.records) ? searchData.records : [];
+
+  // 這裡要吃 official-search-json 的 records
+  const records = Array.isArray(searchData?.records) ? searchData.records : [];
+
+  if (!records.length) {
+    return [];
+  }
 
   const limitedRecords = records.slice(0, maxRows);
 
@@ -121,7 +127,9 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
 
   const rows = await Promise.all(tasks);
 
-  return rows.filter(row => isDateWithinLastNDays(row["公告日"], dateRangeDays));
+  return rows.filter(row => {
+    return isFilled(row["標案名稱"]) && isDateWithinLastNDays(row["公告日"], dateRangeDays);
+  });
 }
 
 /*
@@ -175,7 +183,7 @@ async function searchTender() {
   const dedupedRows = dedupeRowsAcrossQueries(allRows);
 
   const filteredFinalRows = dedupedRows.filter(row => {
-    return isDateWithinLastNDays(row["公告日"], dateRangeDays);
+    return isFilled(row["標案名稱"]) && isDateWithinLastNDays(row["公告日"], dateRangeDays);
   });
 
   const finalRows = filteredFinalRows.map((row, index) => ({
