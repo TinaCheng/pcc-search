@@ -1,13 +1,36 @@
 /*
-  跨關鍵字去重：
-  同一個標案若被不同關鍵字都查到，只保留一筆
+  將天數轉成官網要的西元日期區間
+  例如今天 2026/03/13，15 天 => 2026/02/27 ~ 2026/03/13
+*/
+function buildOfficialDateRange(days) {
+  const { year, month, day } = getTaiwanTodayParts();
+
+  const today = new Date(year, month - 1, day);
+  const start = new Date(today);
+  start.setDate(today.getDate() - (Number(days) - 1));
+
+  function fmt(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}/${m}/${dd}`;
+  }
+
+  return {
+    startDate: fmt(start),
+    endDate: fmt(today)
+  };
+}
+
+/*
+  跨關鍵字去重
 */
 function dedupeRowsAcrossQueries(rows) {
   const map = new Map();
 
   for (const row of rows) {
     const key = [
-      cleanText(row["機關代碼"]),
+      cleanText(row["機關名稱"]),
       cleanText(row["標案案號"]),
       normalizeTitle(row["標案名稱"])
     ].join("||");
@@ -30,10 +53,6 @@ function dedupeRowsAcrossQueries(rows) {
 
     existed["原始輸入"] = Array.from(inputSet).join("｜");
 
-    if (parseDateNumber(row["公告日"]) > parseDateNumber(existed["公告日"])) {
-      existed["公告日"] = row["公告日"];
-    }
-
     for (const keyName of Object.keys(row)) {
       if (!isFilled(existed[keyName]) && isFilled(row[keyName])) {
         existed[keyName] = row[keyName];
@@ -47,16 +66,10 @@ function dedupeRowsAcrossQueries(rows) {
 }
 
 /*
-  將 search record + tender detail 合併成 row
+  將官網搜尋結果 + 官網 detail 合併成前端 row
 */
-function buildRowFromRecord(rawQuery, record, tenderData) {
-  const brief = record?.brief || {};
-
-  const searchDetail = extractDetailObject(record);
-  const tenderDetail = extractDetailObject(tenderData);
-
-  // tenderDetail 優先，searchDetail 補空值
-  const finalDetail = { ...searchDetail, ...tenderDetail };
+function buildRowFromOfficialRecord(rawQuery, record, detailData) {
+  const detail = detailData?.detail || {};
 
   return {
     _selected: true,
@@ -64,65 +77,29 @@ function buildRowFromRecord(rawQuery, record, tenderData) {
 
     "原始輸入": cleanText(rawQuery),
 
-    "公告日": formatTenderDate(
-      pickDetailValue(finalDetail, "公告日") || cleanText(record?.date)
-    ),
+    "公告日": formatTenderDate(detail["公告日"] || record.announce_date || ""),
+    "原公告日": formatTenderDate(detail["原公告日"] || ""),
 
-    "原公告日": formatTenderDate(
-      pickDetailValue(finalDetail, "原公告日")
-    ),
+    "標案案號": cleanText(detail["標案案號"] || record.tender_no || ""),
+    "標案名稱": cleanText(detail["標案名稱"] || record.tender_name || ""),
 
-    "標案案號":
-      pickDetailValue(finalDetail, "標案案號") ||
-      cleanText(record?.job_number),
+    "類型": cleanText(record.tender_way || ""),
+    "分類": cleanText(record.proc_type || ""),
 
-    "標案名稱":
-      pickDetailValue(finalDetail, "標案名稱") ||
-      cleanText(brief?.title),
+    "機關代碼": "",
+    "機關名稱": cleanText(detail["機關名稱"] || record.unit_name || ""),
+    "單位名稱": cleanText(detail["單位名稱"] || ""),
+    "機關地址": cleanText(detail["機關地址"] || ""),
+    "聯絡人": cleanText(detail["聯絡人"] || ""),
+    "聯絡電話": cleanText(detail["聯絡電話"] || ""),
 
-    "類型":
-      cleanText(brief?.type || pickDetailValue(finalDetail, "type")),
+    "決標方式": cleanText(detail["決標方式"] || ""),
+    "截止投標": cleanText(detail["截止投標"] || record.deadline || ""),
+    "開標時間": cleanText(detail["開標時間"] || ""),
+    "是否異動招標文件": cleanText(detail["是否異動招標文件"] || ""),
 
-    "分類":
-      cleanText(brief?.category || pickDetailValue(finalDetail, "標的分類")),
-
-    "機關代碼":
-      pickDetailValue(finalDetail, "機關代碼") ||
-      cleanText(record?.unit_id),
-
-    "機關名稱":
-      pickDetailValue(finalDetail, "機關名稱") ||
-      cleanText(record?.unit_name),
-
-    "單位名稱":
-      pickDetailValue(finalDetail, "單位名稱"),
-
-    "機關地址":
-      pickDetailValue(finalDetail, "機關地址"),
-
-    "聯絡人":
-      pickDetailValue(finalDetail, "聯絡人"),
-
-    "聯絡電話":
-      pickDetailValue(finalDetail, "聯絡電話"),
-
-    "決標方式":
-      pickDetailValue(finalDetail, "決標方式"),
-
-    "截止投標":
-      pickDetailValue(finalDetail, "截止投標"),
-
-    "開標時間":
-      pickDetailValue(finalDetail, "開標時間"),
-
-    "是否異動招標文件":
-      pickDetailValue(finalDetail, "是否異動招標文件"),
-
-    "標案網址":
-      buildOfficialUrl(record, finalDetail),
-
-    "標案API":
-      cleanText(record?.tender_api_url || "")
+    "標案網址": cleanText(record.detail_url || ""),
+    "標案API": cleanText(detailData?.finalUrl || "")
   };
 }
 
@@ -130,43 +107,20 @@ function buildRowFromRecord(rawQuery, record, tenderData) {
   單一關鍵字查詢
 */
 async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
-  const searchData = await searchOne(rawQuery);
-  const allRecords = Array.isArray(searchData.records) ? searchData.records : [];
+  const { startDate, endDate } = buildOfficialDateRange(dateRangeDays);
 
-  // 先依標題 / unit / job 分組去重
-  const groupedMap = new Map();
+  const searchData = await searchOne(rawQuery, startDate, endDate);
+  const records = Array.isArray(searchData.records) ? searchData.records : [];
 
-  for (const rec of allRecords) {
-    const title = cleanText(rec?.brief?.title || "");
+  const limitedRecords = records.slice(0, maxRows);
 
-    const key = [
-      cleanText(rec?.unit_id || ""),
-      cleanText(rec?.job_number || ""),
-      normalizeTitle(title)
-    ].join("||");
-
-    if (!groupedMap.has(key)) {
-      groupedMap.set(key, []);
-    }
-
-    groupedMap.get(key).push(rec);
-  }
-
-  // 每組拿最後一筆
-  const groupedRecords = Array.from(groupedMap.values())
-    .map(group => group[group.length - 1])
-    .slice(0, maxRows);
-
-  // 並行抓 detail
-  const tasks = groupedRecords.map(async (record) => {
-    const tenderApiUrl = cleanText(record?.tender_api_url || "");
-    const tenderData = await fetchTenderDetail(tenderApiUrl);
-    return buildRowFromRecord(rawQuery, record, tenderData);
+  const tasks = limitedRecords.map(async (record) => {
+    const detailData = await fetchTenderDetail(record.detail_url);
+    return buildRowFromOfficialRecord(rawQuery, record, detailData);
   });
 
   const rows = await Promise.all(tasks);
 
-  // 最終公告日區間過濾（包含今天）
   return rows.filter(row => isDateWithinLastNDays(row["公告日"], dateRangeDays));
 }
 
@@ -203,10 +157,9 @@ async function searchTender() {
 
   const dateRangeDays = Number(document.getElementById("dateRange").value || 15);
 
-  status.textContent = "查詢中，正在補抓詳細欄位...";
+  status.textContent = "查詢中，正在抓取官網即時資料...";
   const errs = [];
 
-  // 關鍵字也並行跑
   const queryTasks = queries.map(async (q) => {
     try {
       return await buildRowsForQuery(q, maxRows, dateRangeDays);
@@ -221,7 +174,6 @@ async function searchTender() {
 
   const dedupedRows = dedupeRowsAcrossQueries(allRows);
 
-  // 再保險過濾一次日期
   const filteredFinalRows = dedupedRows.filter(row => {
     return isDateWithinLastNDays(row["公告日"], dateRangeDays);
   });
