@@ -13,21 +13,7 @@ async function fetchJson(url) {
 }
 
 /*
-  search 快取 key
-*/
-function buildSearchCacheKey(query) {
-  return `search_cache::${query}`;
-}
-
-/*
-  tender detail 快取 key
-*/
-function buildTenderCacheKey(url) {
-  return `${TENDER_CACHE_PREFIX}${url}`;
-}
-
-/*
-  sessionStorage 讀取
+  讀取 sessionStorage 快取
 */
 function getFromSessionCache(key, ttlMs) {
   try {
@@ -50,7 +36,7 @@ function getFromSessionCache(key, ttlMs) {
 }
 
 /*
-  sessionStorage 寫入
+  寫入 sessionStorage 快取
 */
 function setToSessionCache(key, data) {
   try {
@@ -64,26 +50,17 @@ function setToSessionCache(key, data) {
 }
 
 /*
-  清除 tender 快取
+  search 快取 key
 */
-function clearTenderCache() {
-  tenderMemoryCache.clear();
+function buildSearchCacheKey(keyword, startDate, endDate) {
+  return `search_cache::${keyword}::${startDate}::${endDate}`;
+}
 
-  try {
-    const keysToDelete = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && key.startsWith(TENDER_CACHE_PREFIX)) {
-        keysToDelete.push(key);
-      }
-    }
-
-    for (const key of keysToDelete) {
-      sessionStorage.removeItem(key);
-    }
-  } catch (e) {
-    // ignore
-  }
+/*
+  detail 快取 key
+*/
+function buildTenderCacheKey(detailUrl) {
+  return `${TENDER_CACHE_PREFIX}${detailUrl}`;
 }
 
 /*
@@ -110,18 +87,41 @@ function clearSearchCache() {
 }
 
 /*
-  清掉全部 API 快取
+  清除 detail 快取
 */
-function clearAllApiCache() {
-  clearTenderCache();
-  clearSearchCache();
+function clearTenderCache() {
+  tenderMemoryCache.clear();
+
+  try {
+    const keysToDelete = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(TENDER_CACHE_PREFIX)) {
+        keysToDelete.push(key);
+      }
+    }
+
+    for (const key of keysToDelete) {
+      sessionStorage.removeItem(key);
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
 /*
-  查詢候選標案
+  清除全部 API 快取
 */
-async function searchOne(query) {
-  const key = buildSearchCacheKey(query);
+function clearAllApiCache() {
+  clearSearchCache();
+  clearTenderCache();
+}
+
+/*
+  官網搜尋
+*/
+async function searchOne(keyword, startDate, endDate) {
+  const key = buildSearchCacheKey(keyword, startDate, endDate);
 
   if (searchMemoryCache.has(key)) {
     return searchMemoryCache.get(key);
@@ -133,7 +133,9 @@ async function searchOne(query) {
     return sessionCached;
   }
 
-  const url = `${SEARCH_API_URL}?query=${encodeURIComponent(query)}&page=1`;
+  const url =
+    `${SEARCH_API_URL}?keyword=${encodeURIComponent(keyword)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+
   const data = await fetchJson(url);
 
   searchMemoryCache.set(key, data);
@@ -143,7 +145,7 @@ async function searchOne(query) {
 }
 
 /*
-  查詢單案 detail
+  官網 detail
 */
 async function fetchTenderDetail(detailUrl) {
   if (!isFilled(detailUrl)) return null;
@@ -152,21 +154,18 @@ async function fetchTenderDetail(detailUrl) {
     return tenderMemoryCache.get(detailUrl);
   }
 
-  const sessionCached = getFromSessionCache(buildTenderCacheKey(detailUrl), TENDER_CACHE_TTL);
+  const cacheKey = buildTenderCacheKey(detailUrl);
+  const sessionCached = getFromSessionCache(cacheKey, TENDER_CACHE_TTL);
   if (sessionCached) {
     tenderMemoryCache.set(detailUrl, sessionCached);
     return sessionCached;
   }
 
-  try {
-    const proxyUrl = `${TENDER_DETAIL_API_URL}?url=${encodeURIComponent(detailUrl)}`;
-    const data = await fetchJson(proxyUrl);
+  const url = `${TENDER_DETAIL_API_URL}?detailUrl=${encodeURIComponent(detailUrl)}`;
+  const data = await fetchJson(url);
 
-    tenderMemoryCache.set(detailUrl, data);
-    setToSessionCache(buildTenderCacheKey(detailUrl), data);
+  tenderMemoryCache.set(detailUrl, data);
+  setToSessionCache(cacheKey, data);
 
-    return data;
-  } catch (e) {
-    return null;
-  }
+  return data;
 }
