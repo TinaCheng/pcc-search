@@ -6,8 +6,10 @@ function buildOfficialDateRange(days) {
   const { year, month, day } = getTaiwanTodayParts();
 
   const today = new Date(year, month - 1, day);
-  const start = new Date(today);
-  start.setDate(today.getDate() - (Number(days) - 1));
+  const start = new Date(year, month - 1, day);
+
+  // 含今天，所以減 days - 1
+  start.setDate(start.getDate() - (Number(days) - 1));
 
   function fmt(d) {
     const y = d.getFullYear();
