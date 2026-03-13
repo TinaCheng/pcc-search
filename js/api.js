@@ -136,6 +136,8 @@ async function searchOne(keyword, startDate, endDate) {
   const url =
     `${SEARCH_API_URL}?keyword=${encodeURIComponent(keyword)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
 
+  console.log("official search url =", url);
+
   const data = await fetchJson(url);
 
   searchMemoryCache.set(key, data);
