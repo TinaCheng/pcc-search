@@ -112,8 +112,6 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   const { startDate, endDate } = buildOfficialDateRange(dateRangeDays);
 
   const searchData = await searchOne(rawQuery, startDate, endDate);
-
-  // 這裡要吃 official-search-json 的 records
   const records = Array.isArray(searchData?.records) ? searchData.records : [];
 
   if (!records.length) {
