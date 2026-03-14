@@ -1,14 +1,8 @@
-/*
-  將天數轉成官網要的西元日期區間
-  例如今天 2026/03/13，15 天 => 2026/02/27 ~ 2026/03/13
-*/
 function buildOfficialDateRange(days) {
   const { year, month, day } = getTaiwanTodayParts();
 
   const today = new Date(year, month - 1, day);
   const start = new Date(year, month - 1, day);
-
-  // 含今天，所以減 days - 1
   start.setDate(start.getDate() - (Number(days) - 1));
 
   function fmt(d) {
@@ -24,9 +18,6 @@ function buildOfficialDateRange(days) {
   };
 }
 
-/*
-  跨關鍵字去重
-*/
 function dedupeRowsAcrossQueries(rows) {
   const map = new Map();
 
@@ -67,9 +58,6 @@ function dedupeRowsAcrossQueries(rows) {
   return Array.from(map.values());
 }
 
-/*
-  將官網搜尋結果 + 官網 detail 合併成前端 row
-*/
 function buildRowFromOfficialRecord(rawQuery, record, detailData) {
   const detail = detailData?.detail || {};
 
@@ -105,12 +93,8 @@ function buildRowFromOfficialRecord(rawQuery, record, detailData) {
   };
 }
 
-/*
-  單一關鍵字查詢
-*/
 async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   const { startDate, endDate } = buildOfficialDateRange(dateRangeDays);
-
   const searchData = await searchOne(rawQuery, startDate, endDate);
   const records = Array.isArray(searchData?.records) ? searchData.records : [];
 
@@ -132,9 +116,6 @@ async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   });
 }
 
-/*
-  主查詢流程
-*/
 async function searchTender() {
   const status = document.getElementById("status");
   const errorCard = document.getElementById("errorCard");
@@ -203,9 +184,6 @@ async function searchTender() {
   }
 }
 
-/*
-  清空
-*/
 function clearAll() {
   document.getElementById("queries").value = "";
   document.getElementById("status").textContent = "尚未查詢";
@@ -216,16 +194,10 @@ function clearAll() {
   LAST_ROWS = [];
 }
 
-/*
-  清除快取
-*/
 function clearCacheOnly() {
   clearAllApiCache();
   document.getElementById("status").textContent = "已清除快取";
 }
 
-/*
-  初始化
-*/
 initAuth();
 startAuthWatcher();
