@@ -94,6 +94,8 @@ function clearAllApiCache() {
 }
 
 async function searchOne(keyword, startDate, endDate) {
+  console.log("api.js newest loaded");
+  
   const key = buildSearchCacheKey(keyword, startDate, endDate);
 
   if (searchMemoryCache.has(key)) {
