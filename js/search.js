@@ -95,28 +95,50 @@ function buildRowFromOfficialRecord(rawQuery, record, detailData) {
 
 async function buildRowsForQuery(rawQuery, maxRows, dateRangeDays) {
   const { startDate, endDate } = buildOfficialDateRange(dateRangeDays);
+
+  console.log("buildRowsForQuery =", {
+    rawQuery,
+    maxRows,
+    dateRangeDays,
+    startDate,
+    endDate
+  });
+
   const searchData = await searchOne(rawQuery, startDate, endDate);
+  console.log("searchData =", searchData);
+
   const records = Array.isArray(searchData?.records) ? searchData.records : [];
+  console.log("records.length =", records.length);
 
   if (!records.length) {
     return [];
   }
 
   const limitedRecords = records.slice(0, maxRows);
+  console.log("limitedRecords =", limitedRecords);
 
   const tasks = limitedRecords.map(async (record) => {
     const detailData = await fetchTenderDetail(record.detail_url);
+    console.log("detailData =", detailData);
+
     return buildRowFromOfficialRecord(rawQuery, record, detailData);
   });
 
   const rows = await Promise.all(tasks);
+  console.log("rows before filter =", rows);
 
-  return rows.filter(row => {
+  const filteredRows = rows.filter(row => {
     return isFilled(row["標案名稱"]) && isDateWithinLastNDays(row["公告日"], dateRangeDays);
   });
+
+  console.log("rows after filter =", filteredRows);
+
+  return filteredRows;
 }
 
 async function searchTender() {
+  console.log("search.js newest loaded");
+  
   const status = document.getElementById("status");
   const errorCard = document.getElementById("errorCard");
   const errorBox = document.getElementById("errorBox");
