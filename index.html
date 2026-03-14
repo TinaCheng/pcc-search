@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- 登入頁 -->
   <div id="loginPage" class="login-shell">
     <div class="login-card">
       <h2>請輸入密碼</h2>
@@ -19,27 +18,26 @@
     </div>
   </div>
 
-  <!-- 主頁 -->
   <div id="appPage" style="display:none;">
     <div class="container">
       <div class="card">
         <h1>政府標案查詢工具</h1>
         <div class="subtext">
-          純前端版。依關鍵字查詢候選標案，再補抓詳細資料。匯出 Excel 時，只有打勾的列會被匯出。
+          官網即時查詢版。依關鍵字查詢官網結果，再補抓明細。匯出 Excel 時，只有打勾的列會被匯出。
         </div>
 
         <div class="grid">
           <div>
             <label for="queries">請輸入關鍵字（每行一筆）</label>
             <textarea id="queries" placeholder="例如：
-屏東縣遙控無人機飛行場地坪延伸工程
-115年「韌性臺灣-強化各類型義消科技化訓練與精進裝備中程計畫」水下工作無人機1組
-115年度遙控水上救生無人機採購案"></textarea>
+無人
+遙控
+臺北市無人機教育中心資訊設備"></textarea>
           </div>
 
           <div>
             <label for="maxRows">每筆候選數</label>
-            <input id="maxRows" type="number" min="1" max="20" value="8" />
+            <input id="maxRows" type="number" min="1" max="50" value="10" />
           </div>
 
           <div>
@@ -82,7 +80,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/api.js"></script>
