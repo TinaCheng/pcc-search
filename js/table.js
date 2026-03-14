@@ -1,4 +1,3 @@
-// 渲染結果表格
 function renderTable(rows) {
   const wrap = document.getElementById("tableWrap");
   const card = document.getElementById("tableCard");
@@ -33,14 +32,14 @@ function renderTable(rows) {
           <th>開標時間</th>
           <th>是否異動招標文件</th>
           <th>標案網址</th>
-          <th>標案 API</th>
+          <th>明細頁網址</th>
         </tr>
       </thead>
       <tbody>
         ${rows.map((r, index) => `
           <tr>
             <td class="checkbox-cell">
-            <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
+              <input type="checkbox" ${r._selected ? "checked" : ""} onchange="toggleRowSelection(${index}, this.checked)">
             </td>
             <td class="col-seq">${esc(r["項次"])}</td>
             <td>${esc(r["原始輸入"])}</td>
@@ -71,20 +70,17 @@ function renderTable(rows) {
   card.style.display = "block";
 }
 
-// 單列勾選切換
 function toggleRowSelection(index, checked) {
   if (LAST_ROWS[index]) {
     LAST_ROWS[index]._selected = checked;
   }
 }
 
-// 全選
 function selectAllRows() {
   LAST_ROWS = LAST_ROWS.map(row => ({ ...row, _selected: true }));
   renderTable(LAST_ROWS);
 }
 
-// 全部取消
 function clearAllSelections() {
   LAST_ROWS = LAST_ROWS.map(row => ({ ...row, _selected: false }));
   renderTable(LAST_ROWS);
