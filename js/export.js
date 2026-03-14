@@ -1,4 +1,3 @@
-// 匯出 Excel，只匯出勾選列
 function exportExcel() {
   const selectedRows = LAST_ROWS.filter(row => row._selected);
 
@@ -10,11 +9,6 @@ function exportExcel() {
   const exportRows = selectedRows.map(row => {
     const out = { ...row };
     delete out._selected;
-
-    if (!isFilled(out["原公告日"])) {
-      delete out["原公告日"];
-    }
-
     return out;
   });
 
