@@ -1,9 +1,6 @@
 const tenderMemoryCache = new Map();
 const searchMemoryCache = new Map();
 
-/*
-  共用 API 呼叫
-*/
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
@@ -12,9 +9,6 @@ async function fetchJson(url) {
   return await res.json();
 }
 
-/*
-  讀取 sessionStorage 快取
-*/
 function getFromSessionCache(key, ttlMs) {
   try {
     const raw = sessionStorage.getItem(key);
@@ -35,9 +29,6 @@ function getFromSessionCache(key, ttlMs) {
   }
 }
 
-/*
-  寫入 sessionStorage 快取
-*/
 function setToSessionCache(key, data) {
   try {
     sessionStorage.setItem(key, JSON.stringify({
@@ -49,23 +40,14 @@ function setToSessionCache(key, data) {
   }
 }
 
-/*
-  search 快取 key
-*/
 function buildSearchCacheKey(keyword, startDate, endDate) {
   return `search_cache::${keyword}::${startDate}::${endDate}`;
 }
 
-/*
-  detail 快取 key
-*/
 function buildTenderCacheKey(detailUrl) {
   return `${TENDER_CACHE_PREFIX}${detailUrl}`;
 }
 
-/*
-  清除 search 快取
-*/
 function clearSearchCache() {
   searchMemoryCache.clear();
 
@@ -86,9 +68,6 @@ function clearSearchCache() {
   }
 }
 
-/*
-  清除 detail 快取
-*/
 function clearTenderCache() {
   tenderMemoryCache.clear();
 
@@ -109,17 +88,11 @@ function clearTenderCache() {
   }
 }
 
-/*
-  清除全部 API 快取
-*/
 function clearAllApiCache() {
   clearSearchCache();
   clearTenderCache();
 }
 
-/*
-  官網搜尋
-*/
 async function searchOne(keyword, startDate, endDate) {
   const key = buildSearchCacheKey(keyword, startDate, endDate);
 
@@ -136,8 +109,6 @@ async function searchOne(keyword, startDate, endDate) {
   const url =
     `${SEARCH_API_URL}?keyword=${encodeURIComponent(keyword)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
 
-  console.log("official search url =", url);
-
   const data = await fetchJson(url);
 
   searchMemoryCache.set(key, data);
@@ -146,9 +117,6 @@ async function searchOne(keyword, startDate, endDate) {
   return data;
 }
 
-/*
-  官網 detail
-*/
 async function fetchTenderDetail(detailUrl) {
   if (!isFilled(detailUrl)) return null;
 
